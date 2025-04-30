@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 로그인 화면 -->
+        <div id="auth-screen" class="screen">
+            <div class="auth-container">
+                <div class="auth-box">
+                    <div class="auth-header">
+                        <h1>카지노넷</h1>
+                        <p class="auth-subtitle">로컬 네트워크 멀티플레이어 카지노 게임</p>
+                    </div>
+                    
+                    <!-- 로그인 폼 -->
+                    <div class="auth-form" id="login-form">
+                        <h2 class="auth-form-title">로그인</h2>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="login-username" placeholder="아이디">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="login-password" placeholder="비밀번호">
+                            </div>
+                        </div>
+                        <button id="login-btn" class="auth-button">
+                            <i class="fas fa-sign-in-alt"></i> 로그인
+                        </button>
+                        <p id="login-error" class="error-message"></p>
+                        
+                        <div class="auth-links">
+                            <p>계정이 없으신가요? <a href="#" id="register-link">회원가입하기</a></p>
+                        </div>
+                    </div>
+
+                    <!-- 회원가입 폼 -->
+                    <div class="auth-form hidden" id="register-form">
+                        <h2 class="auth-form-title">회원가입</h2>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="register-username" placeholder="사용할 아이디">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="register-password" placeholder="비밀번호">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-check-circle"></i>
+                                <input type="password" id="register-confirm-password" placeholder="비밀번호 확인">
+                            </div>
+                        </div>
+                        <button id="register-btn" class="auth-button">
+                            <i class="fas fa-user-plus"></i> 회원가입
+                        </button>
+                        <p id="register-error" class="error-message"></p>
+                        <p id="register-success" class="success-message"></p>
+                        
+                        <div class="auth-links">
+                            <p>이미 계정이 있으신가요? <a href="#" id="login-link">로그인하기</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-footer">
+                        <p>1000 코인으로 시작해 최고의 카지노 플레이어가 되세요!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 메뉴 화면 -->
+        <div id="main-menu-screen" class="screen hidden">
+            <header>
+                <div class="game-header">
+                    <div class="user-info">
+                        <span id="menu-user-name"></span>
+                        <span id="menu-user-balance"></span>
+                    </div>
+                    <div class="header-actions">
+                        <!-- 관리자만 표시되는 버튼 -->
+                        <div id="admin-panel-button" class="admin-button-container hidden">
+                            <button class="admin-btn" id="go-to-admin"><i class="fas fa-cogs"></i> 관리자 페이지</button>
+                        </div>
+                        <button id="menu-logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="menu-container">
+                <h1 class="menu-title">카지노 게임 선택</h1>
+                
+                <div class="games-grid">
+                    <div class="game-card" id="baccarat-card">
+                        <div class="game-card-image">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div class="game-card-content">
+                            <h3>바카라</h3>
+                            <p>클래식 카드 게임의 스릴을 경험해보세요</p>
+                        </div>
+                        <div class="game-card-footer">
+                            <button class="play-btn" data-game="baccarat">플레이하기</button>
+                        </div>
+                    </div>
+                    
+                    <div class="game-card" id="blackjack-card">
+                        <div class="game-card-image">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="game-card-content">
+                            <h3>블랙잭</h3>
+                            <p>딜러와 겨루는 인기 카드 게임</p>
+                        </div>
+                        <div class="game-card-footer">
+                            <button class="play-btn" data-game="blackjack">플레이하기</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 바카라 게임 화면 -->
+        <div id="game-screen" class="screen hidden">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                        <h2>바카라</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-name"></span>
+                        <span id="user-balance"></span>
+                    </div>
+                    <button id="logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+                </div>
+            </header>
+
+            <div class="game-container">
+                <div class="main-area">
+                    <div class="game-table">
+                        <div class="game-status" id="game-status">베팅을 선택하세요</div>
+                        
+                        <div class="card-area">
+                            <div class="card-section">
+                                <h3>플레이어</h3>
+                                <div class="cards" id="player-cards"></div>
+                                <div class="score" id="player-score"></div>
+                            </div>
+                            <div class="card-section">
+                                <h3>뱅커</h3>
+                                <div class="cards" id="banker-cards"></div>
+                                <div class="score" id="banker-score"></div>
+                            </div>
+                        </div>
+
+                        <div class="betting-area">
+                            <div class="bet-options">
+                                <button class="bet-btn" id="player-btn" data-choice="player">플레이어 (1:1)</button>
+                                <button class="bet-btn" id="tie-btn" data-choice="tie">타이 (8:1)</button>
+                                <button class="bet-btn" id="banker-btn" data-choice="banker">뱅커 (0.95:1)</button>
+                            </div>
+                            <div class="bet-amount">
+                                <span>베팅 금액: </span>
+                                <input type="number" id="bet-amount" value="50" min="10" max="10000">
+                            </div>
+                            <button id="place-bet-btn" disabled>베팅 확정</button>
+                        </div>
+                    </div>
+
+                    <div class="game-history">
+                        <h3>게임 기록</h3>
+                        <ul id="history-list"></ul>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <div class="rankings-panel">
+                        <h3>랭킹</h3>
+                        <table id="rankings-table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>이름</th>
+                                    <th>수익</th>
+                                    <th>승률</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rankings-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="online-players">
+                        <h3>접속자 목록</h3>
+                        <ul id="online-players-list"></ul>
+                    </div>
+
+                    <div class="chat-panel">
+                        <h3>채팅</h3>
+                        <div class="chat-messages" id="chat-messages"></div>
+                        <div class="chat-input">
+                            <input type="text" id="chat-input" placeholder="메시지 입력...">
+                            <button id="send-chat-btn">전송</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 관리자 대시보드 화면 -->
+        <div id="admin-screen" class="screen hidden">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="admin-back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                        <h2>관리자 대시보드</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="admin-name">관리자</span>
+                    </div>
+                    <button id="admin-logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+                </div>
+            </header>
+            
+            <div class="admin-container">
+                <div class="admin-section">
+                    <h3>사용자 관리</h3>
+                    <div class="admin-search">
+                        <input type="text" id="user-search" placeholder="사용자 검색...">
+                        <button id="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    
+                    <div class="admin-table-container">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>사용자명</th>
+                                    <th>잔액</th>
+                                    <th>승리</th>
+                                    <th>패배</th>
+                                    <th>이익</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- 사용자 목록이 여기에 동적으로 추가됩니다 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>잔액 관리</h3>
+                    <div class="balance-control">
+                        <div class="user-select">
+                            <select id="selected-user">
+                                <option value="">사용자 선택</option>
+                                <!-- 사용자 목록이 여기에 동적으로 추가됩니다 -->
+                            </select>
+                        </div>
+                        <div class="amount-input">
+                            <input type="number" id="amount" placeholder="금액">
+                        </div>
+                        <div class="action-buttons">
+                            <button id="add-balance" class="add-btn">잔액 증가</button>
+                            <button id="subtract-balance" class="subtract-btn">잔액 감소</button>
+                        </div>
+                    </div>
+                    <p id="balance-message" class="message"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

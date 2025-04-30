@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블랙잭 - 카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="blackjack.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 블랙잭 룸 선택 화면 -->
+        <div id="blackjack-lobby" class="screen">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                        <h2>블랙잭</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="lobby-user-name"></span>
+                        <span id="lobby-user-balance"></span>
+                    </div>
+                    <button id="lobby-logout-btn" class="logout-btn">로그아웃</button>
+                </div>
+            </header>
+
+            <div class="lobby-container">
+                <div class="lobby-actions">
+                    <button id="create-room-btn" class="action-btn"><i class="fas fa-plus"></i> 방 만들기</button>
+                    <div class="lobby-search">
+                        <input type="text" id="room-search" placeholder="방 이름 검색...">
+                        <button id="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="lobby-filters">
+                        <select id="filter-players">
+                            <option value="all">모든 인원수</option>
+                            <option value="2">2인</option>
+                            <option value="3">3인</option>
+                            <option value="4">4인</option>
+                            <option value="5">5인</option>
+                        </select>
+                        <select id="filter-bet">
+                            <option value="all">모든 베팅액</option>
+                            <option value="low">낮음 ($10-50)</option>
+                            <option value="medium">중간 ($51-200)</option>
+                            <option value="high">높음 ($201+)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="rooms-list">
+                    <table id="rooms-table">
+                        <thead>
+                            <tr>
+                                <th>방 이름</th>
+                                <th>방장</th>
+                                <th>인원</th>
+                                <th>최소 베팅</th>
+                                <th>상태</th>
+                                <th>액션</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-body">
+                            <!-- 방 목록이 여기에 동적으로 추가됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="room-create-modal" id="room-create-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>새 블랙잭 방 만들기</h3>
+                            <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="room-name">방 이름</label>
+                                <input type="text" id="room-name" placeholder="방 이름을 입력하세요">
+                            </div>
+                            <div class="form-group">
+                                <label for="max-players">최대 인원</label>
+                                <select id="max-players">
+                                    <option value="2">2명</option>
+                                    <option value="3">3명</option>
+                                    <option value="4" selected>4명</option>
+                                    <option value="5">5명</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="min-bet">최소 베팅액</label>
+                                <input type="number" id="min-bet" min="10" value="50">
+                            </div>
+                            <div class="form-group">
+                                <label for="password-toggle">비밀번호 설정</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="password-toggle">
+                                    <label for="password-toggle"></label>
+                                </div>
+                            </div>
+                            <div class="form-group password-field hidden">
+                                <label for="room-password">비밀번호</label>
+                                <input type="password" id="room-password" placeholder="방 비밀번호">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="cancel-create-btn" class="modal-btn cancel">취소</button>
+                            <button id="confirm-create-btn" class="modal-btn confirm">방 만들기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="room-join-modal" id="room-join-modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>방 참가하기</h3>
+                            <button class="close-modal-btn"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="room-info">
+                                <p>방 이름: <span id="join-room-name"></span></p>
+                                <p>방장: <span id="join-room-owner"></span></p>
+                                <p>인원: <span id="join-room-players"></span></p>
+                                <p>최소 베팅액: <span id="join-room-bet"></span></p>
+                            </div>
+                            <div class="form-group password-field hidden">
+                                <label for="join-password">비밀번호</label>
+                                <input type="password" id="join-password" placeholder="방 비밀번호">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="cancel-join-btn" class="modal-btn cancel">취소</button>
+                            <button id="confirm-join-btn" class="modal-btn confirm">참가하기</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 블랙잭 게임 화면 -->
+        <div id="blackjack-game" class="screen hidden">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="leave-room" class="nav-btn"><i class="fas fa-sign-out-alt"></i> 방 나가기</button>
+                        <h2 id="room-title">블랙잭 방</h2>
+                    </div>
+                    <div class="game-info">
+                        <span id="player-count"><i class="fas fa-users"></i> <span id="current-players">0</span>/<span id="max-room-players">0</span></span>
+                        <span id="min-bet-info"><i class="fas fa-coins"></i> 최소: $<span id="room-min-bet">0</span></span>
+                    </div>
+                    <div class="user-info">
+                        <span id="game-user-name"></span>
+                        <span id="game-user-balance"></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="blackjack-container">
+                <div class="game-area">
+                    <div class="dealer-area">
+                        <div class="player-tag dealer">
+                            <span class="player-name">딜러</span>
+                        </div>
+                        <div class="cards-container" id="dealer-cards">
+                            <!-- 딜러 카드가 여기에 표시됩니다 -->
+                        </div>
+                        <div class="hand-value" id="dealer-value">?</div>
+                    </div>
+
+                    <div class="players-area" id="players-container">
+                        <!-- 플레이어들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+
+                    <div class="game-controls">
+                        <div class="betting-controls" id="betting-controls">
+                            <div class="bet-amount">
+                                <span>베팅 금액: $</span>
+                                <input type="number" id="bet-amount" min="10" value="50">
+                            </div>
+                            <button id="place-bet-btn" class="game-btn bet-btn">베팅하기</button>
+                        </div>
+                        <div class="play-controls hidden" id="play-controls">
+                            <button id="hit-btn" class="game-btn action-btn">히트</button>
+                            <button id="stand-btn" class="game-btn action-btn">스탠드</button>
+                            <button id="double-btn" class="game-btn action-btn">더블다운</button>
+                        </div>
+                        <div class="waiting-message" id="waiting-message">
+                            다른 플레이어의 베팅을 기다리는 중...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <div class="players-list">
+                        <h3>플레이어 목록</h3>
+                        <ul id="room-players-list">
+                            <!-- 플레이어 목록이 여기에 추가됩니다 -->
+                        </ul>
+                    </div>
+
+                    <div class="game-log">
+                        <h3>게임 로그</h3>
+                        <div class="log-container" id="game-log-container">
+                            <!-- 게임 로그가 여기에 추가됩니다 -->
+                        </div>
+                    </div>
+
+                    <div class="chat-panel">
+                        <h3>채팅</h3>
+                        <div class="chat-messages" id="blackjack-chat-messages">
+                            <!-- 채팅 메시지가 여기에 추가됩니다 -->
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="blackjack-chat-input" placeholder="메시지 입력...">
+                            <button id="blackjack-send-chat-btn">전송</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Initialize socket connection to the /blackjack namespace
+        const socketInitFn = io;
+    </script>
+    <script src="blackjack.js"></script>
+</body>
+</html> 

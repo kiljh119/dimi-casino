@@ -1,0 +1,1253 @@
+/* 블랙잭 전용 스타일 */
+:root {
+  --blackjack-green: #105b26;
+  --blackjack-felt: #0c7a40;
+  --blackjack-border: #084c28;
+  --blackjack-header: #0a5530;
+  --blackjack-accent: #ccaa62;
+  --blackjack-accent-dark: #a58a4e;
+  --blackjack-card: #fff;
+  --blackjack-red: #d9534f;
+  --blackjack-black: #292b2c;
+  --chip-1: #bfdefa;
+  --chip-5: #fc8e76;
+  --chip-25: #79c17e;
+  --chip-100: #df64de;
+  --chip-500: #0a0a0a;
+}
+
+#blackjack-lobby, #blackjack-game {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--blackjack-green);
+  background-image: 
+    radial-gradient(circle at 25% 15%, rgba(20, 130, 60, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 75% 85%, rgba(10, 100, 45, 0.3) 0%, transparent 50%);
+}
+
+.game-header {
+  background-color: var(--blackjack-header);
+  border-bottom: 2px solid var(--blackjack-accent);
+}
+
+/* 로비 스타일 */
+.lobby-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 25px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lobby-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background-color: var(--blackjack-accent-dark);
+  transform: translateY(-2px);
+}
+
+.action-btn i {
+  font-size: 16px;
+}
+
+.lobby-search {
+  display: flex;
+  align-items: center;
+}
+
+.lobby-search input {
+  padding: 10px 15px;
+  border: 1px solid var(--blackjack-border);
+  border-radius: 4px 0 0 4px;
+  width: 250px;
+}
+
+.lobby-search button {
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+  border: none;
+  border-radius: 0 4px 4px 0;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
+.lobby-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.lobby-filters select {
+  padding: 10px 15px;
+  border: 1px solid var(--blackjack-border);
+  border-radius: 4px;
+  background-color: white;
+}
+
+.rooms-list {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  flex: 1;
+}
+
+#rooms-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+#rooms-table th {
+  background-color: var(--blackjack-header);
+  color: white;
+  padding: 15px;
+  font-weight: 600;
+}
+
+#rooms-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+#rooms-table tr:last-child td {
+  border-bottom: none;
+}
+
+#rooms-table tr:hover td {
+  background-color: rgba(12, 122, 64, 0.05);
+}
+
+.room-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-waiting {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-playing {
+  background-color: #dc3545;
+  color: white;
+}
+
+.join-btn {
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.join-btn:hover {
+  background-color: var(--blackjack-accent-dark);
+}
+
+.private-room {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.private-room i {
+  color: #dc3545;
+}
+
+/* 모달 스타일 */
+.room-create-modal, .room-join-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--blackjack-black);
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #777;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--blackjack-black);
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background-color: #ccc;
+  border-radius: 12px;
+  transition: background-color 0.2s;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch label {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: white;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+.toggle-switch input:checked + label {
+  left: 28px;
+}
+
+.toggle-switch input:checked ~ .toggle-switch {
+  background-color: var(--blackjack-felt);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px;
+  border-top: 1px solid #eee;
+  gap: 10px;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.modal-btn.cancel {
+  background-color: #f8f9fa;
+  color: #666;
+}
+
+.modal-btn.confirm {
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+}
+
+.modal-btn:hover {
+  transform: translateY(-2px);
+}
+
+.room-info p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.room-info span {
+  font-weight: 600;
+  color: var(--blackjack-black);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 게임 화면 스타일 */
+.blackjack-container {
+  display: flex;
+  flex: 1;
+  padding: 20px;
+  gap: 20px;
+}
+
+.game-area {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--blackjack-felt);
+  border-radius: 8px;
+  border: 2px solid var(--blackjack-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  position: relative;
+}
+
+.dealer-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.player-tag {
+  margin-bottom: 10px;
+  padding: 5px 15px;
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.player-tag.dealer {
+  background-color: #dc3545;
+  color: white;
+}
+
+.cards-container {
+  display: flex;
+  gap: 10px;
+  min-height: 150px;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-container {
+  position: relative;
+  width: 80px;
+  height: 120px;
+  margin: 0 -15px;
+  perspective: 1000px;
+  transition: transform 0.3s ease;
+}
+
+.card-container.dealt {
+  animation: dealCard 0.5s ease-out forwards;
+}
+
+.card-container.highlight {
+  transform: translateY(-15px) scale(1.05);
+}
+
+.card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background-color: var(--blackjack-card);
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  transform-style: preserve-3d;
+  transition: all 0.3s ease;
+}
+
+.card.red {
+  color: var(--blackjack-red);
+}
+
+.card.black {
+  color: var(--blackjack-black);
+}
+
+.card-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px;
+  font-weight: bold;
+}
+
+.top-left {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
+
+.bottom-right {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  transform: rotate(180deg);
+}
+
+.card-center {
+  font-size: 36px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.card-back {
+  background-color: var(--blackjack-header);
+  background-image: 
+    linear-gradient(30deg, var(--blackjack-accent) 12%, transparent 12.5%, transparent 87%, var(--blackjack-accent) 87.5%, var(--blackjack-accent)),
+    linear-gradient(150deg, var(--blackjack-accent) 12%, transparent 12.5%, transparent 87%, var(--blackjack-accent) 87.5%, var(--blackjack-accent)),
+    linear-gradient(30deg, var(--blackjack-accent) 12%, transparent 12.5%, transparent 87%, var(--blackjack-accent) 87.5%, var(--blackjack-accent)),
+    linear-gradient(150deg, var(--blackjack-accent) 12%, transparent 12.5%, transparent 87%, var(--blackjack-accent) 87.5%, var(--blackjack-accent)),
+    linear-gradient(60deg, var(--blackjack-accent-dark) 25%, transparent 25.5%, transparent 75%, var(--blackjack-accent-dark) 75%, var(--blackjack-accent-dark)),
+    linear-gradient(60deg, var(--blackjack-accent-dark) 25%, transparent 25.5%, transparent 75%, var(--blackjack-accent-dark) 75%, var(--blackjack-accent-dark));
+  background-size: 20px 35px;
+  background-position: 0 0, 0 0, 10px 17.5px, 10px 17.5px, 0 0, 10px 17.5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-logo {
+  color: var(--blackjack-accent);
+  font-size: 24px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes dealCard {
+  0% {
+    transform: translateY(-50px) translateX(50px) scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.hand-value {
+  margin-top: 10px;
+  padding: 5px 12px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 16px;
+  color: white;
+  transition: color 0.3s ease;
+}
+
+.hand-value.bust {
+  color: #dc3545;
+  font-weight: bold;
+  animation: shake 0.5s ease;
+}
+
+.hand-value.blackjack {
+  color: #ffd700;
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
+
+.hand-value.good {
+  color: #28a745;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.players-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  flex: 1;
+}
+
+.player-spot {
+  position: relative;
+  padding: 15px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin: 10px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.player-spot.current-player {
+  border-color: var(--blackjack-accent);
+  box-shadow: 0 0 15px rgba(204, 170, 98, 0.5);
+}
+
+.player-color-1 {
+  background: linear-gradient(to bottom, rgba(41, 128, 185, 0.3), rgba(41, 128, 185, 0.1));
+}
+
+.player-color-2 {
+  background: linear-gradient(to bottom, rgba(155, 89, 182, 0.3), rgba(155, 89, 182, 0.1));
+}
+
+.player-color-3 {
+  background: linear-gradient(to bottom, rgba(46, 204, 113, 0.3), rgba(46, 204, 113, 0.1));
+}
+
+.player-color-4 {
+  background: linear-gradient(to bottom, rgba(230, 126, 34, 0.3), rgba(230, 126, 34, 0.1));
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.player-avatar {
+  width: 30px;
+  height: 30px;
+  background-color: var(--blackjack-header);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.player-details {
+  flex: 1;
+}
+
+.player-tag {
+  font-weight: bold;
+  color: white;
+  display: flex;
+  align-items: center;
+}
+
+.owner-crown {
+  color: #ffd700;
+  margin-left: 5px;
+  font-size: 12px;
+}
+
+.player-bet-container {
+  display: flex;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.chip-icon {
+  width: 12px;
+  height: 12px;
+  background-color: var(--chip-100);
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+/* 반응형 플레이어 레이아웃 */
+.players-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.players-1 {
+  justify-content: center;
+}
+
+.players-2 {
+  justify-content: space-around;
+}
+
+.players-3 {
+  justify-content: space-between;
+}
+
+.players-4 {
+  justify-content: space-between;
+}
+
+.game-controls {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.betting-controls, .play-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.bet-amount {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-weight: 500;
+}
+
+.bet-amount input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid var(--blackjack-border);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.game-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.game-btn:hover {
+  transform: translateY(-2px);
+}
+
+.game-btn.bet-btn {
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+}
+
+.game-btn.action-btn {
+  background-color: white;
+  color: var(--blackjack-black);
+}
+
+.game-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.waiting-message {
+  color: white;
+  font-weight: 500;
+  text-align: center;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.side-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.players-list, .game-log, .chat-panel {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.players-list h3, .game-log h3, .chat-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: var(--blackjack-black);
+  border-bottom: 2px solid var(--blackjack-accent);
+  padding-bottom: 8px;
+}
+
+#room-players-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+#room-players-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#room-players-list li:last-child {
+  border-bottom: none;
+}
+
+.player-item-name {
+  font-weight: 500;
+}
+
+.player-item-status {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.player-status-ready {
+  background-color: #28a745;
+  color: white;
+}
+
+.player-status-waiting {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.player-status-playing {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.log-container {
+  height: 150px;
+  overflow-y: auto;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.log-entry:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.log-time {
+  color: var(--blackjack-header);
+  font-weight: 500;
+  margin-right: 5px;
+}
+
+.chat-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  min-height: 150px;
+  max-height: 300px;
+}
+
+.chat-input {
+  display: flex;
+  gap: 5px;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.chat-input button {
+  padding: 8px 15px;
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 1200px) {
+  .blackjack-container {
+    flex-direction: column;
+  }
+  
+  .side-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .players-list, .game-log {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .chat-panel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .lobby-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .lobby-search input {
+    width: 100%;
+  }
+  
+  .lobby-filters {
+    flex-direction: column;
+  }
+  
+  .side-panel {
+    flex-direction: column;
+  }
+  
+  .card-container {
+    width: 60px;
+    height: 90px;
+    margin: 0 -10px;
+  }
+  
+  .card-center {
+    font-size: 24px;
+  }
+  
+  .player-spot {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-container {
+    width: 70px;
+    height: 100px;
+  }
+  
+  .game-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .betting-controls, .play-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+/* 칩 스타일 */
+.chip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.betting-chip {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  cursor: pointer;
+  border: 3px dashed white;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.betting-chip:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.betting-chip.selected {
+  transform: translateY(-5px);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+.chip-1 {
+  background-color: var(--chip-1);
+}
+
+.chip-5 {
+  background-color: var(--chip-5);
+}
+
+.chip-25 {
+  background-color: var(--chip-25);
+}
+
+.chip-100 {
+  background-color: var(--chip-100);
+}
+
+.chip-500 {
+  background-color: var(--chip-500);
+}
+
+.bet-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.clear-bet-btn, .max-bet-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-bet-btn {
+  background-color: #f8f9fa;
+  color: #343a40;
+}
+
+.max-bet-btn {
+  background-color: var(--blackjack-accent);
+  color: var(--blackjack-black);
+}
+
+.clear-bet-btn:hover, .max-bet-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 베팅 칩 애니메이션 */
+.betting-chips {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 5;
+}
+
+.chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: white;
+  position: absolute;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  animation: chipDrop 0.5s ease forwards;
+}
+
+@keyframes chipDrop {
+  0% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(5px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 승리/패배 효과 */
+.win-effect-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  animation: winEffect 0.5s ease-out forwards;
+}
+
+@keyframes winEffect {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.win-message {
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 10px;
+  animation: pulse 1s infinite;
+}
+
+.win-amount {
+  font-size: 24px;
+  font-weight: bold;
+  color: #3ce639;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.player-status {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.win-status {
+  background-color: rgba(40, 167, 69, 0.9);
+  color: white;
+}
+
+.lose-status {
+  background-color: rgba(220, 53, 69, 0.9);
+  color: white;
+}
+
+.push-status {
+  background-color: rgba(255, 193, 7, 0.9);
+  color: #212529;
+}
+
+.lose-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #dc3545;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.fade-out {
+  animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 동전 효과 */
+.coin {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background-color: #ffd700;
+  border-radius: 50%;
+  z-index: 5;
+  animation: coinJump 1s ease-out forwards;
+}
+
+@keyframes coinJump {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-50px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* 잔액 변경 효과 */
+.balance-effect {
+  position: absolute;
+  top: 50%;
+  right: -50px;
+  font-size: 18px;
+  font-weight: bold;
+  animation: balanceFly 2s ease-out forwards;
+}
+
+.balance-effect.positive {
+  color: #28a745;
+}
+
+.balance-effect.negative {
+  color: #dc3545;
+}
+
+@keyframes balanceFly {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-30px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+/* 버스트 및 21 효과 */
+.bust-effect, .blackjack-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  animation: effectIn 0.5s ease forwards;
+}
+
+.bust-effect {
+  color: #dc3545;
+}
+
+.blackjack-effect {
+  color: #ffd700;
+}
+
+@keyframes effectIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+/* 에러 메시지 */
+.error-message {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 12px 25px;
+  border-radius: 5px;
+  font-weight: bold;
+  z-index: 1000;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.error-message.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(10px);
+} 
