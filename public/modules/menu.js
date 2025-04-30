@@ -1,16 +1,33 @@
 // 메뉴 모듈
-import { showMainMenuScreen } from './auth.js';
 
 // DOM 요소
 const mainMenuScreen = document.getElementById('main-menu-screen');
 const playButtons = document.querySelectorAll('.play-btn');
 const adminPanelButton = document.getElementById('admin-panel-button');
 const goToAdminBtn = document.getElementById('go-to-admin');
+const adminScreen = document.getElementById('admin-screen');
 
 // 관리자 화면 표시
 function showAdminScreen() {
     document.querySelectorAll('.screen').forEach(screen => screen.classList.add('hidden'));
-    document.getElementById('admin-screen').classList.remove('hidden');
+    adminScreen.classList.remove('hidden');
+}
+
+// 메인 메뉴 화면 표시
+function showMainMenuScreen() {
+    document.querySelectorAll('.screen').forEach(screen => screen.classList.add('hidden'));
+    mainMenuScreen.classList.remove('hidden');
+    
+    // 사용자 정보 업데이트
+    const currentUser = window.app?.currentUser;
+    if (currentUser) {
+        document.getElementById('menu-user-name').textContent = currentUser.username;
+        if (!currentUser.isAdmin) {
+            document.getElementById('menu-user-balance').textContent = `$${currentUser.balance.toFixed(2)}`;
+        } else {
+            document.getElementById('menu-user-balance').textContent = '관리자';
+        }
+    }
 }
 
 // 메뉴 모듈 초기화
@@ -26,14 +43,14 @@ export function initMenu(socket) {
             const game = this.dataset.game;
             if (game === 'baccarat' || game === 'ranking') {
                 // 사용자 정보 로컬 스토리지에 저장
-                if (window.currentUser) {
-                    console.log('게임 이동 전 사용자 정보 저장:', window.currentUser);
-                    localStorage.setItem('user', JSON.stringify(window.currentUser));
+                if (window.app?.currentUser) {
+                    console.log('게임 이동 전 사용자 정보 저장:', window.app.currentUser);
+                    localStorage.setItem('user', JSON.stringify(window.app.currentUser));
                     // 해당 게임 페이지로 이동
                     window.location.href = `/${game}.html`;
                 } else {
                     console.error('로그인 정보가 없습니다. 로그인 페이지로 이동합니다.');
-                    window.location.href = '/';
+                    window.location.href = 'login.html';
                 }
             }
         });
@@ -56,14 +73,14 @@ export function initMenu(socket) {
             
             if (gameName) {
                 // 사용자 정보 로컬 스토리지에 저장
-                if (window.currentUser) {
-                    console.log('게임 이동 전 사용자 정보 저장 (카드 클릭):', window.currentUser);
-                    localStorage.setItem('user', JSON.stringify(window.currentUser));
+                if (window.app?.currentUser) {
+                    console.log('게임 이동 전 사용자 정보 저장 (카드 클릭):', window.app.currentUser);
+                    localStorage.setItem('user', JSON.stringify(window.app.currentUser));
                     // 해당 게임 페이지로 이동
                     window.location.href = `/${gameName}.html`;
                 } else {
                     console.error('로그인 정보가 없습니다. 로그인 페이지로 이동합니다.');
-                    window.location.href = '/';
+                    window.location.href = 'login.html';
                 }
             }
         });
@@ -79,6 +96,11 @@ export function initMenu(socket) {
         showMainMenuScreen();
     });
     
+    // 로그아웃 버튼 이벤트
+    document.querySelectorAll('#logout-btn, #menu-logout-btn, #admin-logout-btn').forEach(btn => {
+        btn.addEventListener('click', handleLogout);
+    });
+    
     // 소켓 이벤트 리스너 설정
     socket.on('online_players_update', players => {
         if (document.getElementById('menu-total-online')) {
@@ -88,4 +110,30 @@ export function initMenu(socket) {
     
     // 접근성을 위한 전역 노출
     window.showAdminScreen = showAdminScreen;
+    window.showMainMenuScreen = showMainMenuScreen;
+}
+
+// 로그아웃 처리
+function handleLogout() {
+    // API 로그아웃
+    fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // JWT 토큰 삭제
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            
+            // 로그인 페이지로 리디렉션
+            window.location.href = 'login.html';
+        }
+    })
+    .catch(error => {
+        console.error('Logout error:', error);
+    });
 } 
