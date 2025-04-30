@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 로그인 화면 -->
+        <div id="auth-screen" class="screen">
+            <div class="auth-container">
+                <div class="auth-box">
+                    <div class="auth-header">
+                        <h1>카지노넷</h1>
+                        <p class="auth-subtitle">로컬 네트워크 멀티플레이어 카지노 게임</p>
+                    </div>
+                    
+                    <!-- 로그인 폼 -->
+                    <div class="auth-form" id="login-form">
+                        <h2 class="auth-form-title">로그인</h2>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="login-username" placeholder="아이디">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="login-password" placeholder="비밀번호">
+                            </div>
+                        </div>
+                        <button id="login-btn" class="auth-button">
+                            <i class="fas fa-sign-in-alt"></i> 로그인
+                        </button>
+                        <p id="login-error" class="error-message"></p>
+                        
+                        <div class="auth-links">
+                            <p>계정이 없으신가요? <a href="register.html" id="register-link">회원가입하기</a></p>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-footer">
+                        <p>1000 코인으로 시작해 최고의 카지노 플레이어가 되세요!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 로그인 관련 스크립트
+        document.addEventListener('DOMContentLoaded', function() {
+            // 로그인 버튼 이벤트
+            const loginBtn = document.getElementById('login-btn');
+            const loginUsername = document.getElementById('login-username');
+            const loginPassword = document.getElementById('login-password');
+            const loginError = document.getElementById('login-error');
+            
+            // 이미 로그인된 경우 메인 메뉴로 리디렉션
+            if (localStorage.getItem('user')) {
+                window.location.href = '/';
+                return;
+            }
+            
+            // 소켓 연결
+            const socket = io();
+            
+            // 로그인 시도
+            loginBtn.addEventListener('click', function() {
+                const username = loginUsername.value.trim();
+                const password = loginPassword.value.trim();
+                
+                if (!username || !password) {
+                    loginError.textContent = '아이디와 비밀번호를 입력해주세요.';
+                    return;
+                }
+                
+                // 로그인 요청
+                fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 로그인 성공 시 사용자 정보 저장
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        
+                        // 인증 토큰 저장
+                        if (data.token) {
+                            localStorage.setItem('auth_token', data.token);
+                        }
+                        
+                        // 메인 메뉴로 이동
+                        window.location.href = '/';
+                    } else {
+                        // 로그인 실패
+                        loginError.textContent = data.message || '로그인에 실패했습니다.';
+                    }
+                })
+                .catch(error => {
+                    console.error('로그인 요청 오류:', error);
+                    loginError.textContent = '서버 오류가 발생했습니다. 나중에 다시 시도해주세요.';
+                });
+            });
+            
+            // 엔터 키로 로그인
+            loginPassword.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loginBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

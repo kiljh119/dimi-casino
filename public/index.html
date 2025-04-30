@@ -11,81 +11,8 @@
 </head>
 <body>
     <div class="container">
-        <!-- 로그인 화면 -->
-        <div id="auth-screen" class="screen">
-            <div class="auth-container">
-                <div class="auth-box">
-                    <div class="auth-header">
-                        <h1>카지노넷</h1>
-                        <p class="auth-subtitle">로컬 네트워크 멀티플레이어 카지노 게임</p>
-                    </div>
-                    
-                    <!-- 로그인 폼 -->
-                    <div class="auth-form" id="login-form">
-                        <h2 class="auth-form-title">로그인</h2>
-                        <div class="form-group">
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-user"></i>
-                                <input type="text" id="login-username" placeholder="아이디">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-lock"></i>
-                                <input type="password" id="login-password" placeholder="비밀번호">
-                            </div>
-                        </div>
-                        <button id="login-btn" class="auth-button">
-                            <i class="fas fa-sign-in-alt"></i> 로그인
-                        </button>
-                        <p id="login-error" class="error-message"></p>
-                        
-                        <div class="auth-links">
-                            <p>계정이 없으신가요? <a href="#" id="register-link">회원가입하기</a></p>
-                        </div>
-                    </div>
-
-                    <!-- 회원가입 폼 -->
-                    <div class="auth-form hidden" id="register-form">
-                        <h2 class="auth-form-title">회원가입</h2>
-                        <div class="form-group">
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-user"></i>
-                                <input type="text" id="register-username" placeholder="사용할 아이디">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-lock"></i>
-                                <input type="password" id="register-password" placeholder="비밀번호">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-check-circle"></i>
-                                <input type="password" id="register-confirm-password" placeholder="비밀번호 확인">
-                            </div>
-                        </div>
-                        <button id="register-btn" class="auth-button">
-                            <i class="fas fa-user-plus"></i> 회원가입
-                        </button>
-                        <p id="register-error" class="error-message"></p>
-                        <p id="register-success" class="success-message"></p>
-                        
-                        <div class="auth-links">
-                            <p>이미 계정이 있으신가요? <a href="#" id="login-link">로그인하기</a></p>
-                        </div>
-                    </div>
-                    
-                    <div class="auth-footer">
-                        <p>1000 코인으로 시작해 최고의 카지노 플레이어가 되세요!</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- 메인 메뉴 화면 -->
-        <div id="main-menu-screen" class="screen hidden">
+        <div id="main-menu-screen" class="screen">
             <header>
                 <div class="game-header">
                     <div class="user-info">
@@ -204,6 +131,317 @@
     </div>
     
     <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 로그인 상태 확인
+            const user = localStorage.getItem('user');
+            
+            if (!user) {
+                // 로그인되지 않은 경우 로그인 페이지로 리디렉션
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // 사용자 정보 파싱
+            const currentUser = JSON.parse(user);
+            
+            // 소켓 연결
+            const socket = io();
+            
+            // DOM 요소
+            const mainMenuScreen = document.getElementById('main-menu-screen');
+            const adminScreen = document.getElementById('admin-screen');
+            const menuUserName = document.getElementById('menu-user-name');
+            const menuUserBalance = document.getElementById('menu-user-balance');
+            const adminPanelButton = document.getElementById('admin-panel-button');
+            const goToAdminBtn = document.getElementById('go-to-admin');
+            const adminBackToMenuBtn = document.getElementById('admin-back-to-menu');
+            const menuLogoutBtn = document.getElementById('menu-logout-btn');
+            const adminLogoutBtn = document.getElementById('admin-logout-btn');
+            const adminName = document.getElementById('admin-name');
+            
+            // 사용자 정보 표시
+            menuUserName.textContent = currentUser.username;
+            menuUserBalance.textContent = `$${currentUser.balance.toFixed(2)}`;
+            
+            // 관리자인 경우 관리자 버튼 표시
+            if (currentUser.username === 'admin') {
+                adminPanelButton.classList.remove('hidden');
+                adminName.textContent = '관리자: ' + currentUser.username;
+            }
+            
+            // 관리자 페이지로 이동
+            goToAdminBtn.addEventListener('click', function() {
+                mainMenuScreen.classList.add('hidden');
+                adminScreen.classList.remove('hidden');
+                
+                // 관리자 페이지에서 사용자 목록 불러오기
+                loadUsers();
+            });
+            
+            // 메뉴로 돌아가기
+            adminBackToMenuBtn.addEventListener('click', function() {
+                adminScreen.classList.add('hidden');
+                mainMenuScreen.classList.remove('hidden');
+            });
+            
+            // 로그아웃 처리
+            function handleLogout() {
+                // 로컬 스토리지에서 사용자 정보 제거
+                localStorage.removeItem('user');
+                localStorage.removeItem('auth_token');
+                
+                // 소켓에 로그아웃 이벤트 전송
+                socket.emit('logout');
+                
+                // 로그인 페이지로 리디렉션
+                window.location.href = 'login.html';
+            }
+            
+            menuLogoutBtn.addEventListener('click', handleLogout);
+            adminLogoutBtn.addEventListener('click', handleLogout);
+            
+            // 사용자 목록 불러오기
+            function loadUsers() {
+                const usersTableBody = document.getElementById('users-table-body');
+                const selectedUser = document.getElementById('selected-user');
+                
+                fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.users) {
+                        // 테이블에 사용자 목록 추가
+                        usersTableBody.innerHTML = '';
+                        selectedUser.innerHTML = '<option value="">사용자 선택</option>';
+                        
+                        data.users.forEach(user => {
+                            // 테이블 행 추가
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.username}</td>
+                                <td>$${user.balance.toFixed(2)}</td>
+                                <td>${user.wins || 0}</td>
+                                <td>${user.losses || 0}</td>
+                                <td>$${user.profit ? user.profit.toFixed(2) : '0.00'}</td>
+                                <td>
+                                    <button class="edit-btn" data-id="${user.id}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            `;
+                            usersTableBody.appendChild(row);
+                            
+                            // 선택 목록에 사용자 추가
+                            const option = document.createElement('option');
+                            option.value = user.id;
+                            option.textContent = user.username;
+                            selectedUser.appendChild(option);
+                            
+                            // 편집 버튼 이벤트
+                            const editBtn = row.querySelector('.edit-btn');
+                            editBtn.addEventListener('click', function() {
+                                selectedUser.value = user.id;
+                                document.getElementById('amount').focus();
+                            });
+                        });
+                    } else {
+                        usersTableBody.innerHTML = '<tr><td colspan="6">사용자 목록을 불러올 수 없습니다.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('사용자 목록 불러오기 오류:', error);
+                    usersTableBody.innerHTML = '<tr><td colspan="6">서버 오류가 발생했습니다.</td></tr>';
+                });
+            }
+            
+            // 잔액 증가/감소 기능
+            document.getElementById('add-balance').addEventListener('click', function() {
+                updateBalance('add');
+            });
+            
+            document.getElementById('subtract-balance').addEventListener('click', function() {
+                updateBalance('subtract');
+            });
+            
+            // 사용자 삭제 기능
+            document.getElementById('delete-user').addEventListener('click', function() {
+                const userId = document.getElementById('selected-user').value;
+                const username = document.getElementById('selected-user').options[document.getElementById('selected-user').selectedIndex].text;
+                
+                if (!userId) {
+                    showBalanceMessage('사용자를 선택해주세요.', 'error');
+                    return;
+                }
+                
+                if (!confirm(`정말로 ${username} 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                    return;
+                }
+                
+                fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showBalanceMessage(data.message || '사용자가 성공적으로 삭제되었습니다.', 'success');
+                        loadUsers();
+                    } else {
+                        showBalanceMessage(data.message || '사용자 삭제에 실패했습니다.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('사용자 삭제 오류:', error);
+                    showBalanceMessage('서버 오류가 발생했습니다.', 'error');
+                });
+            });
+            
+            // 사용자 검색 기능
+            document.getElementById('search-btn').addEventListener('click', function() {
+                const searchQuery = document.getElementById('user-search').value.trim();
+                
+                if (!searchQuery) {
+                    loadUsers();
+                    return;
+                }
+                
+                fetch(`/api/admin/users/search?q=${encodeURIComponent(searchQuery)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.users) {
+                        // 테이블에 사용자 목록 추가
+                        const usersTableBody = document.getElementById('users-table-body');
+                        usersTableBody.innerHTML = '';
+                        
+                        if (data.users.length === 0) {
+                            usersTableBody.innerHTML = '<tr><td colspan="6">검색 결과가 없습니다.</td></tr>';
+                            return;
+                        }
+                        
+                        data.users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.username}</td>
+                                <td>$${user.balance.toFixed(2)}</td>
+                                <td>${user.wins || 0}</td>
+                                <td>${user.losses || 0}</td>
+                                <td>$${user.profit ? user.profit.toFixed(2) : '0.00'}</td>
+                                <td>
+                                    <button class="edit-btn" data-id="${user.id}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            `;
+                            usersTableBody.appendChild(row);
+                            
+                            // 편집 버튼 이벤트
+                            const editBtn = row.querySelector('.edit-btn');
+                            editBtn.addEventListener('click', function() {
+                                document.getElementById('selected-user').value = user.id;
+                                document.getElementById('amount').focus();
+                            });
+                        });
+                    } else {
+                        const usersTableBody = document.getElementById('users-table-body');
+                        usersTableBody.innerHTML = '<tr><td colspan="6">검색 결과를 불러올 수 없습니다.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('사용자 검색 오류:', error);
+                    const usersTableBody = document.getElementById('users-table-body');
+                    usersTableBody.innerHTML = '<tr><td colspan="6">서버 오류가 발생했습니다.</td></tr>';
+                });
+            });
+            
+            // 잔액 업데이트 함수
+            function updateBalance(action) {
+                const userId = document.getElementById('selected-user').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                
+                if (!userId) {
+                    showBalanceMessage('사용자를 선택해주세요.', 'error');
+                    return;
+                }
+                
+                if (isNaN(amount) || amount <= 0) {
+                    showBalanceMessage('유효한 금액을 입력해주세요.', 'error');
+                    return;
+                }
+                
+                fetch(`/api/admin/users/${userId}/balance/${action}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: JSON.stringify({ amount })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showBalanceMessage(data.message || '잔액이 업데이트되었습니다.', 'success');
+                        document.getElementById('amount').value = '';
+                        loadUsers();
+                    } else {
+                        showBalanceMessage(data.message || '잔액 업데이트에 실패했습니다.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('잔액 업데이트 오류:', error);
+                    showBalanceMessage('서버 오류가 발생했습니다.', 'error');
+                });
+            }
+            
+            // 메시지 표시 함수
+            function showBalanceMessage(message, type) {
+                const messageElement = document.getElementById('balance-message');
+                messageElement.textContent = message;
+                messageElement.className = 'message ' + type;
+                
+                // 3초 후 메시지 숨기기
+                setTimeout(() => {
+                    messageElement.textContent = '';
+                    messageElement.className = 'message';
+                }, 3000);
+            }
+            
+            // 소켓 이벤트 리스너
+            socket.on('connect', () => {
+                console.log('서버에 연결되었습니다:', socket.id);
+                
+                // 사용자 로그인
+                socket.emit('login', {
+                    username: currentUser.username
+                });
+            });
+            
+            socket.on('login_response', (response) => {
+                if (response.success) {
+                    console.log('소켓 로그인 성공:', response.user.username);
+                    
+                    // 잔액 업데이트
+                    if (response.user.balance !== undefined) {
+                        menuUserBalance.textContent = `$${response.user.balance.toFixed(2)}`;
+                        
+                        // 로컬 스토리지 업데이트
+                        currentUser.balance = response.user.balance;
+                        localStorage.setItem('user', JSON.stringify(currentUser));
+                    }
+                } else {
+                    console.error('소켓 로그인 실패:', response.message);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
