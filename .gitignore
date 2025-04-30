@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # dependencies
 */node_modules
 /.pnp
 .pnp.js
+=======
+.idea
+>>>>>>> b1351b38c0b4748a9dda9186cc0c57bfb3f5006f
