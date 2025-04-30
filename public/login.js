@@ -182,6 +182,20 @@ function setupSocketListeners() {
         console.log('소켓 로그인 성공:', data);
         redirectToMainMenu();
     });
+    
+    // 강제 로그아웃 이벤트 처리
+    socket.on('forced_logout', (data) => {
+        console.log('강제 로그아웃:', data.message);
+        
+        // 알림 표시
+        alert(data.message);
+        
+        // 로그아웃 처리
+        removeToken();
+        
+        // 에러 메시지 표시
+        loginError.textContent = '다른 기기에서 로그인되었습니다. 다시 로그인해주세요.';
+    });
 }
 
 // 입력 필드 포커스 이벤트 설정

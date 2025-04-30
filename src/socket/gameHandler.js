@@ -6,6 +6,9 @@ const { calculateGameResult } = require('../utils/gameUtils');
 const onlinePlayers = {};
 const games = {};
 
+// 소켓 ID로 사용자 검색
+const socketIdsByUsername = {};
+
 // 게임 소켓 핸들러
 function setupGameSocket(io) {
   console.log('게임 소켓 핸들러 설정 완료');
@@ -32,11 +35,20 @@ function setupGameSocket(io) {
       
       // 이미 로그인된 사용자인지 확인
       if (onlinePlayers[username]) {
-        socket.emit('login_response', { 
-          success: false, 
-          message: '이미 접속 중인 사용자입니다.' 
-        });
-        return;
+        // 기존 연결 강제 종료를 위해 소켓 ID 찾기
+        const existingSocketId = socketIdsByUsername[username];
+        if (existingSocketId) {
+          // 기존 소켓에 강제 로그아웃 이벤트 발송
+          io.to(existingSocketId).emit('forced_logout', {
+            message: '다른 기기에서 로그인되었습니다. 현재 세션이 종료됩니다.'
+          });
+          
+          // 온라인 상태에서 제거
+          delete onlinePlayers[username];
+          delete socketIdsByUsername[username];
+          
+          console.log(`사용자 ${username}의 기존 세션(${existingSocketId})을 강제 종료했습니다.`);
+        }
       }
       
       try {
@@ -60,6 +72,9 @@ function setupGameSocket(io) {
           username: username,
           lastActive: Date.now()
         };
+        
+        // 소켓 ID 매핑 업데이트
+        socketIdsByUsername[username] = socket.id;
         
         // 히스토리 조회
         const history = await GameHistory.getFormattedUserHistory(user.id);
@@ -96,6 +111,7 @@ function setupGameSocket(io) {
       if (socket.username && onlinePlayers[socket.username]) {
         // 현재 사용자 정보 삭제
         delete onlinePlayers[socket.username];
+        delete socketIdsByUsername[socket.username];
         socket.username = null;
         socket.userId = null;
         
@@ -406,14 +422,16 @@ function setupGameSocket(io) {
     
     // 연결 종료
     socket.on('disconnect', () => {
+      console.log('사용자 연결이 종료되었습니다:', socket.id);
+      
       if (socket.username && onlinePlayers[socket.username]) {
         // 현재 사용자 정보 삭제
         delete onlinePlayers[socket.username];
+        delete socketIdsByUsername[socket.username];
         
         // 모든 사용자에게 접속자 목록 업데이트 알림
-        io.emit('online_players_update', Object.keys(onlinePlayers));
+        updateOnlinePlayers(io);
       }
-      console.log('사용자 연결이 종료되었습니다:', socket.id);
     });
   });
 }

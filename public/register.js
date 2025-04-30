@@ -16,6 +16,16 @@ const inputWrappers = document.querySelectorAll('.input-icon-wrapper');
 // 전역 변수
 let isProcessing = false; // 회원가입 처리 중 상태
 
+// 로컬 스토리지 키
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'user';
+
+// JWT 토큰 삭제
+function removeToken() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+}
+
 // 폼 메시지 초기화
 function clearFormMessages() {
     registerError.textContent = '';
@@ -100,6 +110,23 @@ function setButtonState(button, isLoading, text) {
         : `<i class="fas fa-user-plus"></i> ${text}`;
 }
 
+// 소켓 리스너 설정
+function setupSocketListeners() {
+    // 강제 로그아웃 이벤트 처리
+    socket.on('forced_logout', (data) => {
+        console.log('강제 로그아웃:', data.message);
+        
+        // 알림 표시
+        alert(data.message);
+        
+        // 로그아웃 처리
+        removeToken();
+        
+        // 에러 메시지 표시
+        registerError.textContent = '다른 기기에서 로그인되었습니다. 다시 시도해주세요.';
+    });
+}
+
 // 입력 필드 포커스 이벤트 설정
 function setupInputFocusEvents() {
     // 각 입력 필드 래퍼에 이벤트 추가
@@ -154,6 +181,7 @@ function setupEventListeners() {
 // 초기화 함수
 function init() {
     setupEventListeners();
+    setupSocketListeners();
 }
 
 // DOM 로드 시 초기화

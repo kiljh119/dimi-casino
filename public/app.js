@@ -20,6 +20,13 @@ function getUserInfo() {
     return userJson ? JSON.parse(userJson) : null;
 }
 
+// 로그아웃 처리
+function handleLogout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    window.location.href = 'login.html';
+}
+
 // 앱 초기화
 document.addEventListener('DOMContentLoaded', () => {
     // 로그인 상태 확인
@@ -31,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'login.html';
         return;
     }
+    
+    // 소켓 이벤트 설정
+    setupSocketListeners();
     
     // 모듈 초기화
     initMenu(socket);
@@ -52,3 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('login', { username: user.username });
     }
 });
+
+// 소켓 이벤트 리스너 설정
+function setupSocketListeners() {
+    // 강제 로그아웃 이벤트 처리
+    socket.on('forced_logout', (data) => {
+        console.log('강제 로그아웃:', data.message);
+        
+        // 알림 표시
+        alert(data.message);
+        
+        // 로그아웃 처리
+        handleLogout();
+    });
+}

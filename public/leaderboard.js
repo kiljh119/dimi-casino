@@ -142,6 +142,21 @@ function setupSocketListeners() {
         alert('서버 연결 오류: ' + err.message);
     });
     
+    // 강제 로그아웃 이벤트 처리
+    socket.on('forced_logout', (data) => {
+        console.log('강제 로그아웃:', data.message);
+        
+        // 알림 표시
+        alert(data.message);
+        
+        // 로그아웃 처리
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        
+        // 로그인 페이지로 리디렉션
+        window.location.href = 'login.html';
+    });
+    
     // 로그인 응답 처리
     socket.on('login_response', (response) => {
         console.log('로그인 응답:', response);
