@@ -22,6 +22,7 @@ let socketInstance = null; // 소켓 인스턴스
 
 // 로컬 스토리지 키
 const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'user';
 
 // 로그인 폼 표시
 function showLoginForm() {
@@ -86,6 +87,29 @@ function getToken() {
 // JWT 토큰 삭제
 function removeToken() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY); // 사용자 정보도 함께 삭제
+}
+
+// 사용자 정보 저장
+function saveUserInfo(user) {
+    console.log('사용자 정보 로컬 스토리지에 저장:', user);
+    
+    // window.currentUser에 설정
+    window.currentUser = user;
+    currentUser = user;
+    
+    // 로컬 스토리지에 저장
+    try {
+        const userData = { ...user };
+        // 토큰이 있으면 함께 저장
+        const token = getToken();
+        if (token) {
+            userData.token = token;
+        }
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    } catch (e) {
+        console.error('사용자 정보 저장 오류:', e);
+    }
 }
 
 // 토큰으로 자동 로그인
@@ -105,7 +129,8 @@ async function autoLogin() {
         const data = await response.json();
         
         if (data.success) {
-            currentUser = data.user;
+            // 사용자 정보 저장
+            saveUserInfo(data.user);
             
             // 관리자 로그인인 경우
             if (data.user.isAdmin) {
@@ -159,13 +184,16 @@ function handleLogin() {
         setButtonState(loginBtn, false, '로그인');
         
         if (data.success) {
-            currentUser = data.user;
             clearFormInputs();
             
             // JWT 토큰 저장
             if (data.token) {
+                console.log('로그인 성공: 토큰 저장');
                 saveToken(data.token);
             }
+            
+            // 사용자 정보 저장
+            saveUserInfo(data.user);
             
             // 관리자 로그인인 경우
             if (data.user.isAdmin) {
@@ -316,8 +344,28 @@ function setupSocketListeners(socket) {
     // 로그인 응답 처리
     socket.on('login_response', (data) => {
         if (data.success) {
-            currentUser = data.user;
+            // 사용자 정보 저장
+            saveUserInfo(data.user);
             showMainMenuScreen();
+        }
+    });
+    
+    // 잔액 업데이트 처리
+    socket.on('balance_update', (data) => {
+        if (currentUser) {
+            // 현재 사용자 잔액 업데이트
+            currentUser.balance = data.balance;
+            // 글로벌 객체도 업데이트
+            if (window.currentUser) {
+                window.currentUser.balance = data.balance;
+            }
+            // 로컬 스토리지 업데이트
+            saveUserInfo(currentUser);
+            
+            // 메뉴 화면에 표시
+            if (document.getElementById('menu-user-balance')) {
+                document.getElementById('menu-user-balance').textContent = `$${data.balance.toFixed(2)}`;
+            }
         }
     });
 }

@@ -295,6 +295,11 @@ function updateHistory(historyItem) {
 function updateRankings(rankings) {
     rankingsBody.innerHTML = '';
     
+    if (!rankings || rankings.length === 0) {
+        console.error('랭킹 데이터가 없습니다');
+        return;
+    }
+    
     rankings.forEach((rank, index) => {
         const tr = document.createElement('tr');
         
@@ -304,18 +309,23 @@ function updateRankings(rankings) {
         const usernameCell = document.createElement('td');
         usernameCell.textContent = rank.username;
         
+        const balanceCell = document.createElement('td');
+        balanceCell.textContent = `$${parseFloat(rank.balance || 0).toFixed(2)}`;
+        balanceCell.className = parseFloat(rank.balance || 0) > 1000 ? 'positive' : 'negative';
+        
         const profitCell = document.createElement('td');
-        profitCell.textContent = `$${parseFloat(rank.profit).toFixed(2)}`;
-        profitCell.className = parseFloat(rank.profit) >= 0 ? 'positive' : 'negative';
+        profitCell.textContent = `$${parseFloat(rank.profit || 0).toFixed(2)}`;
+        profitCell.className = parseFloat(rank.profit || 0) >= 0 ? 'positive' : 'negative';
         
         const gamesCell = document.createElement('td');
-        gamesCell.textContent = rank.games;
+        gamesCell.textContent = rank.games || 0;
         
         const winRateCell = document.createElement('td');
-        winRateCell.textContent = `${rank.winRate}%`;
+        winRateCell.textContent = `${rank.winRate || '0.0'}%`;
         
         tr.appendChild(rankCell);
         tr.appendChild(usernameCell);
+        tr.appendChild(balanceCell);
         tr.appendChild(profitCell);
         tr.appendChild(gamesCell);
         tr.appendChild(winRateCell);
@@ -455,6 +465,58 @@ function setupSocketListeners(socket) {
             betOptions.forEach(btn => btn.disabled = false);
             betAmount.disabled = false;
         }, (data.playerCards.length + data.bankerCards.length) * 1500 + 500);
+    });
+    
+    // 게임 완료 (다른 사용자의 게임) 처리
+    socket.on('game_completed', (data) => {
+        console.log('게임 완료 알림:', data.player);
+        
+        // 데이터 유효성 검사
+        if (!data || typeof data !== 'object') {
+            console.error('유효하지 않은 게임 완료 데이터:', data);
+            return;
+        }
+        
+        // 현재 로그인한 사용자의 게임이 아닌 경우에만 처리
+        if (window.currentUser && data.player !== window.currentUser.username) {
+            try {
+                // 안전하게 데이터 추출
+                const playerName = data.player || '알 수 없음';
+                const betChoice = typeof data.choice === 'string' ? data.choice : 'unknown';
+                
+                // 숫자 데이터 안전하게 파싱
+                let betAmount = 0;
+                try {
+                    betAmount = typeof data.bet === 'number' ? data.bet : 
+                               typeof data.bet === 'string' ? parseFloat(data.bet) : 0;
+                } catch (e) { betAmount = 0; }
+                
+                // 승패 여부 및 금액 데이터
+                const isWin = !!data.isWin;
+                let winAmount = 0;
+                try {
+                    winAmount = typeof data.winAmount === 'number' ? data.winAmount :
+                               typeof data.winAmount === 'string' ? parseFloat(data.winAmount) : 0;
+                } catch (e) { winAmount = 0; }
+                
+                // 점수 정보
+                const playerScore = typeof data.playerScore === 'number' ? data.playerScore : 0;
+                const bankerScore = typeof data.bankerScore === 'number' ? data.bankerScore : 0;
+                
+                // 포맷팅
+                const gameResult = isWin ? '승리' : '패배';
+                const amount = isWin 
+                    ? `+$${winAmount.toFixed(2)}`
+                    : `-$${betAmount.toFixed(2)}`;
+                const score = `(P${playerScore}:B${bankerScore})`;
+                
+                // 최종 히스토리 항목 
+                const formattedHistoryItem = `[${playerName}] ${gameResult} ${amount} ${score} - ${betChoice} 베팅`;
+                updateHistory(formattedHistoryItem);
+            } catch (error) {
+                console.error('게임 기록 처리 오류:', error);
+            }
+        }
     });
     
     // 채팅 메시지 처리

@@ -15,7 +15,7 @@
   /* 게임 관련 컬러 */
   --player-color: #3498db;
   --banker-color: #e74c3c;
-  --tie-color: #9b59b6;
+  --tie-color: #2ecc71;
   
   /* 상태 색상 */
   --error-color: #ff6b6b;
@@ -420,21 +420,57 @@ body {
 
 .game-table {
   background-color: var(--card-color);
-  padding: 25px;
+  padding: 30px;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+  transition: all 0.5s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
 .game-status {
+  padding: 10px;
+  margin-bottom: 15px;
   text-align: center;
-  padding: 14px;
-  margin-bottom: 25px;
-  font-size: 18px;
-  font-weight: 600;
-  background-color: var(--primary-color);
-  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.game-status.win {
+  background-color: rgba(32, 201, 151, 0.2);
+  color: #20c997;
+  border: 2px solid rgba(32, 201, 151, 0.5);
+  box-shadow: 0 0 10px rgba(32, 201, 151, 0.3);
+  animation: pulseWin 2s infinite;
+}
+
+.game-status.lose {
+  background-color: rgba(255, 87, 87, 0.2);
+  color: #ff5757;
+  border: 2px solid rgba(255, 87, 87, 0.5);
+  box-shadow: 0 0 10px rgba(255, 87, 87, 0.3);
+  animation: pulseLose 2s infinite;
+}
+
+.game-status.error {
+  background-color: rgba(255, 87, 87, 0.1);
+  color: #ff5757;
+  border: 1px solid rgba(255, 87, 87, 0.3);
+}
+
+@keyframes pulseWin {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseLose {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .card-area {
@@ -1349,8 +1385,9 @@ body {
 }
 
 .nav-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
 }
 
 .game-nav h2 {
@@ -1661,42 +1698,361 @@ body {
 /* 승리/패배 화면 효과 */
 .win-effect {
   animation: winEffect 2s ease-in-out infinite;
-  box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
-  background-color: rgba(32, 201, 151, 0.05);
+  box-shadow: 0 0 25px 8px rgba(32, 201, 151, 0.5);
+  background-color: rgba(32, 201, 151, 0.1);
+  border: 2px solid rgba(32, 201, 151, 0.3);
+  transition: all 0.5s ease;
 }
 
 .lose-effect {
   animation: loseEffect 2s ease-in-out infinite;
-  box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
-  background-color: rgba(255, 87, 87, 0.05);
+  box-shadow: 0 0 25px 8px rgba(255, 87, 87, 0.5);
+  background-color: rgba(255, 87, 87, 0.1);
+  border: 2px solid rgba(255, 87, 87, 0.3);
+  transition: all 0.5s ease;
 }
 
 @keyframes winEffect {
   0% {
-    box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
-    background-color: rgba(32, 201, 151, 0.05);
-  }
-  50% {
-    box-shadow: 0 0 30px 10px rgba(32, 201, 151, 0.5);
+    box-shadow: 0 0 25px 8px rgba(32, 201, 151, 0.5);
     background-color: rgba(32, 201, 151, 0.1);
   }
+  50% {
+    box-shadow: 0 0 40px 15px rgba(32, 201, 151, 0.7);
+    background-color: rgba(32, 201, 151, 0.15);
+    transform: scale(1.01);
+  }
   100% {
-    box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
-    background-color: rgba(32, 201, 151, 0.05);
+    box-shadow: 0 0 25px 8px rgba(32, 201, 151, 0.5);
+    background-color: rgba(32, 201, 151, 0.1);
+    transform: scale(1);
   }
 }
 
 @keyframes loseEffect {
   0% {
-    box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
-    background-color: rgba(255, 87, 87, 0.05);
-  }
-  50% {
-    box-shadow: 0 0 30px 10px rgba(255, 87, 87, 0.5);
+    box-shadow: 0 0 25px 8px rgba(255, 87, 87, 0.5);
     background-color: rgba(255, 87, 87, 0.1);
   }
-  100% {
-    box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
-    background-color: rgba(255, 87, 87, 0.05);
+  50% {
+    box-shadow: 0 0 40px 15px rgba(255, 87, 87, 0.7);
+    background-color: rgba(255, 87, 87, 0.15);
+    transform: scale(1.01);
   }
+  100% {
+    box-shadow: 0 0 25px 8px rgba(255, 87, 87, 0.5);
+    background-color: rgba(255, 87, 87, 0.1);
+    transform: scale(1);
+  }
+}
+
+/* 게임 기록 스타일 */
+.history-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: #fff;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.history-item:hover {
+    background-color: #f9fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.85em;
+    color: #555;
+}
+
+.history-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.history-details {
+    display: flex;
+    flex-grow: 1;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.history-id {
+    font-size: 0.9em;
+    color: #444;
+    font-weight: 500;
+}
+
+.history-time {
+    font-size: 0.8em;
+    color: #444;
+}
+
+.history-result {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.9em;
+    color: var(--text-color);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.player-win {
+    color: var(--player-color, #3498db);
+}
+
+.banker-win {
+    color: var(--banker-color, #e74c3c);
+}
+
+.tie {
+    color: var(--tie-color, #2ecc71);
+}
+
+.player-banker {
+    color: var(--text-color);
+    border-left: 3px solid;
+    border-image: linear-gradient(to right, var(--player-color) 50%, var(--banker-color) 50%) 1;
+}
+
+.history-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #333;
+    padding: 3px 8px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    min-width: 45px;
+}
+
+.history-bet {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #333;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.history-player {
+    font-size: 0.9em;
+    color: #444;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.history-player.current-user {
+    color: #8B6D00;
+    font-weight: bold;
+    background-color: rgba(255, 235, 59, 0.3);
+}
+
+.history-result-text {
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.history-result-text.win {
+    color: var(--success-color);
+    background-color: rgba(32, 201, 151, 0.2);
+}
+
+.history-result-text.lose {
+    color: var(--error-color);
+    background-color: rgba(255, 107, 107, 0.2);
+}
+
+/* 패배 시 이탤릭체로 표시 */
+.history-item:has(.history-result-text.lose) {
+    border-left-color: var(--error-color);
+}
+
+/* 승리 시 강조 표시 */
+.history-item:has(.history-result-text.win) {
+    border-left-color: var(--success-color);
+}
+
+/* 채팅 메시지 스타일 */
+.chat-message {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    max-width: 90%;
+}
+
+.message-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 0.85em;
+}
+
+.message-sender {
+    font-weight: bold;
+    color: #333;
+    margin-right: 8px;
+}
+
+.message-time {
+    color: #555;
+    font-size: 0.8em;
+}
+
+.message-text {
+    color: #222;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.my-message {
+    background-color: rgba(52, 152, 219, 0.25);
+    margin-left: auto;
+    border-bottom-right-radius: 0;
+}
+
+.my-message .message-sender {
+    color: #1A5889;
+}
+
+.admin-message {
+    background-color: rgba(231, 76, 60, 0.25);
+    border-left: 3px solid #e74c3c;
+}
+
+.admin-badge {
+    background-color: #e74c3c;
+    color: white;
+    font-size: 0.75em;
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+.system-message {
+    background-color: rgba(46, 204, 113, 0.2);
+    border-left: 3px solid #2ecc71;
+    color: #16683E;
+}
+
+.system-message .message-sender {
+    color: #16683E;
+}
+
+/* 승리/패배 효과 스타일 */
+.win-effect {
+    box-shadow: 0 0 20px 5px rgba(46, 204, 113, 0.5);
+    animation: pulse-win 1.5s infinite;
+}
+
+.lose-effect {
+    box-shadow: 0 0 20px 5px rgba(231, 76, 60, 0.5);
+    animation: pulse-lose 1.5s infinite;
+}
+
+@keyframes pulse-win {
+    0% { box-shadow: 0 0 20px 5px rgba(46, 204, 113, 0.5); }
+    50% { box-shadow: 0 0 30px 10px rgba(46, 204, 113, 0.7); }
+    100% { box-shadow: 0 0 20px 5px rgba(46, 204, 113, 0.5); }
+}
+
+@keyframes pulse-lose {
+    0% { box-shadow: 0 0 20px 5px rgba(231, 76, 60, 0.5); }
+    50% { box-shadow: 0 0 30px 10px rgba(231, 76, 60, 0.7); }
+    100% { box-shadow: 0 0 20px 5px rgba(231, 76, 60, 0.5); }
+}
+
+/* 승리 효과 애니메이션 */
+.confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #f00;
+    top: -10px;
+    animation: confetti-fall 4s linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(500px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* 게임 기록 및 채팅 헤더 컨테이너 */
+.history-header-container, .chat-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.history-header-container h3, .chat-header-container h3 {
+    margin: 0;
+    transform: none;
+    left: 0;
+}
+
+/* 초기화 버튼 스타일 */
+.clear-btn {
+    background-color: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: all 0.3s;
+}
+
+.clear-btn:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.clear-btn:active {
+    transform: scale(0.95);
+}
+
+/* 초기화 버튼 아이콘 */
+.clear-btn i {
+    font-size: 14px;
 }

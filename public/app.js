@@ -3,7 +3,6 @@ const socket = io();
 
 // 모듈 가져오기
 import { initAuth, showMainMenuScreen } from './modules/auth.js';
-import { initBaccarat } from './modules/baccarat.js';
 import { initMenu } from './modules/menu.js';
 import { initAdmin } from './modules/admin.js';
 
@@ -11,7 +10,6 @@ import { initAdmin } from './modules/admin.js';
 document.addEventListener('DOMContentLoaded', () => {
     // 모듈 초기화
     initAuth(socket);
-    initBaccarat(socket);
     initMenu(socket);
     initAdmin(socket);
     

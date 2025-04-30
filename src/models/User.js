@@ -74,7 +74,7 @@ class User {
   static getTopRankings(limit = 5) {
     return new Promise((resolve, reject) => {
       db.all(
-        `SELECT username, profit, wins, losses,
+        `SELECT username, balance, profit, wins, losses,
          CASE WHEN (wins + losses) > 0 THEN (wins * 100.0 / (wins + losses)) ELSE 0 END as win_rate
          FROM users
          ORDER BY profit DESC
@@ -85,7 +85,10 @@ class User {
           
           const formattedRankings = rankings.map(user => ({
             username: user.username,
+            balance: user.balance || 0,
             profit: user.profit || 0,
+            wins: user.wins || 0,
+            losses: user.losses || 0,
             games: (user.wins || 0) + (user.losses || 0),
             winRate: user.win_rate.toFixed(1)
           }));

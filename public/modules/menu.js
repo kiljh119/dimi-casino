@@ -7,19 +7,6 @@ const playButtons = document.querySelectorAll('.play-btn');
 const adminPanelButton = document.getElementById('admin-panel-button');
 const goToAdminBtn = document.getElementById('go-to-admin');
 
-// 게임 화면 표시
-function showGameScreen() {
-    document.querySelectorAll('.screen').forEach(screen => screen.classList.add('hidden'));
-    document.getElementById('game-screen').classList.remove('hidden');
-    
-    // 사용자 정보 업데이트
-    const currentUser = window.currentUser;
-    if (currentUser) {
-        document.getElementById('user-name').textContent = currentUser.username;
-        document.getElementById('user-balance').textContent = `$${currentUser.balance.toFixed(2)}`;
-    }
-}
-
 // 관리자 화면 표시
 function showAdminScreen() {
     document.querySelectorAll('.screen').forEach(screen => screen.classList.add('hidden'));
@@ -28,16 +15,26 @@ function showAdminScreen() {
 
 // 메뉴 모듈 초기화
 export function initMenu(socket) {
-    // 게임 선택 이벤트
+    // 게임 선택 이벤트 - <a> 태그로 변경되어 이 이벤트는 더 이상 필요하지 않지만 코드는 유지
     playButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const game = btn.dataset.game;
-            if (game === 'baccarat') {
-                showGameScreen();
-            } else if (game === 'blackjack') {
+        btn.addEventListener('click', function(e) {
+            // 기본 동작 방지 (a 태그 링크 이동 방지)
+            e.preventDefault();
+            console.log('게임 선택 버튼 클릭:', this.dataset.game);
+            
+            // 게임 종류에 따라 처리
+            const game = this.dataset.game;
+            if (game === 'baccarat' || game === 'blackjack') {
                 // 사용자 정보 로컬 스토리지에 저장
-                localStorage.setItem('user', JSON.stringify(window.currentUser));
-                window.location.href = '/blackjack.html';
+                if (window.currentUser) {
+                    console.log('게임 이동 전 사용자 정보 저장:', window.currentUser);
+                    localStorage.setItem('user', JSON.stringify(window.currentUser));
+                    // 해당 게임 페이지로 이동
+                    window.location.href = `/${game}.html`;
+                } else {
+                    console.error('로그인 정보가 없습니다. 로그인 페이지로 이동합니다.');
+                    window.location.href = '/';
+                }
             }
         });
     });
@@ -49,12 +46,25 @@ export function initMenu(socket) {
             if (e.target.closest('.play-btn')) return;
             
             const gameId = card.id;
+            let gameName = '';
+            
             if (gameId === 'baccarat-card') {
-                showGameScreen();
+                gameName = 'baccarat';
             } else if (gameId === 'blackjack-card') {
+                gameName = 'blackjack';
+            }
+            
+            if (gameName) {
                 // 사용자 정보 로컬 스토리지에 저장
-                localStorage.setItem('user', JSON.stringify(window.currentUser));
-                window.location.href = '/blackjack.html';
+                if (window.currentUser) {
+                    console.log('게임 이동 전 사용자 정보 저장 (카드 클릭):', window.currentUser);
+                    localStorage.setItem('user', JSON.stringify(window.currentUser));
+                    // 해당 게임 페이지로 이동
+                    window.location.href = `/${gameName}.html`;
+                } else {
+                    console.error('로그인 정보가 없습니다. 로그인 페이지로 이동합니다.');
+                    window.location.href = '/';
+                }
             }
         });
     });
@@ -69,11 +79,6 @@ export function initMenu(socket) {
         showMainMenuScreen();
     });
     
-    // 바카라 게임에서 메뉴로 돌아가기 버튼
-    document.getElementById('back-to-menu').addEventListener('click', () => {
-        showMainMenuScreen();
-    });
-    
     // 소켓 이벤트 리스너 설정
     socket.on('online_players_update', players => {
         if (document.getElementById('menu-total-online')) {
@@ -82,6 +87,5 @@ export function initMenu(socket) {
     });
     
     // 접근성을 위한 전역 노출
-    window.showGameScreen = showGameScreen;
     window.showAdminScreen = showAdminScreen;
 } 

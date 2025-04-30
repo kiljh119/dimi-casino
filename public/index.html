@@ -115,7 +115,7 @@
                             <p>클래식 카드 게임의 스릴을 경험해보세요</p>
                         </div>
                         <div class="game-card-footer">
-                            <button class="play-btn" data-game="baccarat">플레이하기</button>
+                            <a href="baccarat.html" class="play-btn" data-game="baccarat">플레이하기</a>
                         </div>
                     </div>
                     
@@ -128,94 +128,7 @@
                             <p>딜러와 겨루는 인기 카드 게임</p>
                         </div>
                         <div class="game-card-footer">
-                            <button class="play-btn" data-game="blackjack">플레이하기</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 바카라 게임 화면 -->
-        <div id="game-screen" class="screen hidden">
-            <header>
-                <div class="game-header">
-                    <div class="game-nav">
-                        <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
-                        <h2>바카라</h2>
-                    </div>
-                    <div class="user-info">
-                        <span id="user-name"></span>
-                        <span id="user-balance"></span>
-                    </div>
-                    <button id="logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
-                </div>
-            </header>
-
-            <div class="game-container">
-                <div class="main-area">
-                    <div class="game-table">
-                        <div class="game-status" id="game-status">베팅을 선택하세요</div>
-                        
-                        <div class="card-area">
-                            <div class="card-section">
-                                <h3>플레이어</h3>
-                                <div class="cards" id="player-cards"></div>
-                                <div class="score" id="player-score"></div>
-                            </div>
-                            <div class="card-section">
-                                <h3>뱅커</h3>
-                                <div class="cards" id="banker-cards"></div>
-                                <div class="score" id="banker-score"></div>
-                            </div>
-                        </div>
-
-                        <div class="betting-area">
-                            <div class="bet-options">
-                                <button class="bet-btn" id="player-btn" data-choice="player">플레이어 (1:1)</button>
-                                <button class="bet-btn" id="tie-btn" data-choice="tie">타이 (8:1)</button>
-                                <button class="bet-btn" id="banker-btn" data-choice="banker">뱅커 (0.95:1)</button>
-                            </div>
-                            <div class="bet-amount">
-                                <span>베팅 금액: </span>
-                                <input type="number" id="bet-amount" value="50" min="10" max="10000">
-                            </div>
-                            <button id="place-bet-btn" disabled>베팅 확정</button>
-                        </div>
-                    </div>
-
-                    <div class="game-history">
-                        <h3>게임 기록</h3>
-                        <ul id="history-list"></ul>
-                    </div>
-                </div>
-
-                <div class="side-panel">
-                    <div class="rankings-panel">
-                        <h3>랭킹</h3>
-                        <table id="rankings-table">
-                            <thead>
-                                <tr>
-                                    <th>순위</th>
-                                    <th>이름</th>
-                                    <th>수익</th>
-                                    <th>승률</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rankings-body"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="online-players">
-                        <h3>접속자 목록</h3>
-                        <ul id="online-players-list"></ul>
-                    </div>
-
-                    <div class="chat-panel">
-                        <h3>채팅</h3>
-                        <div class="chat-messages" id="chat-messages"></div>
-                        <div class="chat-input">
-                            <input type="text" id="chat-input" placeholder="메시지 입력...">
-                            <button id="send-chat-btn">전송</button>
+                            <a href="blackjack.html" class="play-btn" data-game="blackjack">플레이하기</a>
                         </div>
                     </div>
                 </div>
