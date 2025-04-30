@@ -75,116 +75,102 @@ if (currentUser) {
     console.log('사용자 정보 화면에 표시됨');
 }
 
-// 베팅 처리
+// 베팅 시작 처리
 function handlePlaceBet() {
-    console.log('베팅 처리 함수 호출됨');
-    
-    if (isGameInProgress) {
-        console.log('이미 게임이 진행 중입니다.');
+    if (!selectedBet) {
+        alert('베팅 옵션을 선택해주세요.');
         return;
     }
     
-    if (!currentUser || !currentUser.username) {
-        console.error('로그인 정보가 없습니다.');
-        gameStatus.textContent = '로그인이 필요합니다';
-        gameStatus.className = 'error';
-        
-        // 로그인 페이지로 리디렉션
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 2000);
+    if (!betAmount.value || isNaN(parseFloat(betAmount.value)) || parseFloat(betAmount.value) <= 0) {
+        alert('유효한 베팅 금액을 입력해주세요.');
         return;
     }
     
-    const amount = parseFloat(betAmount.value);
-    if (!selectedBet || isNaN(amount) || amount <= 0) {
-        gameStatus.textContent = '베팅 옵션과 금액을 선택해주세요.';
-        gameStatus.className = 'error';
-        console.log('베팅 옵션이나 금액이 유효하지 않습니다.');
-        return;
-    }
+    // 이전 게임의 결과 표시 및 효과 제거
+    const gameTable = document.querySelector('.game-table');
+    gameTable.classList.remove('win-effect', 'lose-effect');
     
-    console.log(`베팅 정보: ${selectedBet}, 금액: ${amount}`);
+    // 이전 게임의 카드 초기화
+    clearCards();
     
+    // 동일한 게임 ID가 여러 번 발생하지 않도록 타임스탬프 포함
+    const gameId = `game_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    
+    // 게임 진행 중 상태로 설정
     isGameInProgress = true;
+    
+    // 중복 베팅 방지
     placeBetBtn.disabled = true;
     betOptions.forEach(btn => btn.disabled = true);
     betAmount.disabled = true;
-    gameStatus.textContent = '베팅 진행 중...';
-    gameStatus.className = 'info';
     
-    // CSS 클래스 추가
-    if (!document.getElementById('game-status-styles')) {
+    // 베팅 진행 중 메시지 표시
+    gameStatus.textContent = '베팅 대기 중...';
+    gameStatus.className = 'waiting';
+    
+    // 베팅 중 애니메이션 추가
+    const loadingDotsElement = document.createElement('span');
+    loadingDotsElement.className = 'loading-dots';
+    loadingDotsElement.textContent = '';
+    gameStatus.appendChild(loadingDotsElement);
+    
+    // 로딩 애니메이션 스타일 추가
+    if (!document.getElementById('loading-animation-styles')) {
         const styleElement = document.createElement('style');
-        styleElement.id = 'game-status-styles';
-        style.textContent = `
-            #game-status.info {
-                color: #1976D2;
-                font-weight: bold;
-            }
-            .status-animation {
+        styleElement.id = 'loading-animation-styles';
+        styleElement.textContent = `
+            .loading-dots {
                 display: inline-block;
-                animation: statusPulse 1.5s infinite;
+                position: relative;
+                width: 30px;
+                margin-left: 6px;
             }
-            @keyframes statusPulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.5; }
-                100% { opacity: 1; }
+            .loading-dots:after {
+                content: '...';
+                animation: loading 1.5s infinite;
+                letter-spacing: 2px;
+            }
+            @keyframes loading {
+                0%, 100% { opacity: 0.2; }
+                50% { opacity: 1; }
             }
         `;
         document.head.appendChild(styleElement);
     }
     
-    // 애니메이션 효과가 있는 요소 추가
-    const animationSpan = document.createElement('span');
-    animationSpan.className = 'status-animation';
-    animationSpan.textContent = ' ●';
-    gameStatus.appendChild(animationSpan);
+    // 게임 생성 및 실행 중인 게임 목록에 추가
+    const newHistoryItem = {
+        gameId: gameId,
+        time: Date.now(),
+        player: currentUser.username,
+        choice: selectedBet,
+        bet: parseFloat(betAmount.value),
+        status: 'in_progress'
+    };
     
-    // 이전 게임의 효과 제거
-    const gameTable = document.querySelector('.game-table');
-    gameTable.classList.remove('win-effect', 'lose-effect');
+    // 진행 중인 게임 표시 (히스토리 목록 상단에 추가)
+    updateHistory(newHistoryItem, false);
     
-    // 게임 시작 시 "게임중" 상태로 기록 추가
-    const inProgressGameId = `game_${currentUser.username}_${Date.now()}`;
+    // 서버에 베팅 정보 전송
+    socket.emit('place_bet', {
+        gameId: gameId,
+        choice: selectedBet,
+        amount: parseFloat(betAmount.value),
+        username: currentUser.username
+    });
     
-    // 필수 정보가 모두 있는지 확인
-    if (currentUser.username && selectedBet && !isNaN(amount) && amount > 0) {
-        const inProgressHistoryItem = {
-            gameId: inProgressGameId,
-            time: Date.now(),
-            player: currentUser.username,
-            choice: selectedBet,
-            bet: amount,
-            status: 'in_progress',
-            isInProgress: true
-        };
-        
-        // 게임중 상태를 기록에 추가 (로컬 스토리지에는 저장하지 않음)
-        updateHistory(inProgressHistoryItem, false);
-        
-        // 소켓을 통해 베팅 요청 (사용자 정보도 함께 전송 - 게임 ID를 추가)
-        console.log('place_bet 이벤트 발생:', { username: currentUser.username, choice: selectedBet, amount: amount, gameId: inProgressGameId });
-        socket.emit('place_bet', {
-            username: currentUser.username,
-            choice: selectedBet,
-            amount: amount,
-            gameId: inProgressGameId
-        });
-    } else {
-        console.error('베팅 정보가 유효하지 않습니다:', {
-            username: currentUser ? currentUser.username : null,
-            choice: selectedBet,
-            amount: amount
-        });
-        
-        // 소켓을 통해 베팅 요청 (오류 발생 가능성 있음)
-        socket.emit('place_bet', {
-            username: currentUser.username,
-            choice: selectedBet,
-            amount: amount
-        });
-    }
+    console.log('베팅 시작: 선택 =', selectedBet, '금액 =', betAmount.value);
+    
+    // 게임 응답이 오지 않을 경우를 대비한 타임아웃 설정
+    setTimeout(() => {
+        if (isGameInProgress) {
+            const loadingElement = gameStatus.querySelector('.loading-dots');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+        }
+    }, 10000);
 }
 
 // 베팅 UI 업데이트
@@ -235,11 +221,47 @@ function displayGameResult(result) {
     
     console.log('게임 기록 데이터:', gameHistory); // 디버깅용
     
+    // 카드 수와 각 카드 표시 시간을 기반으로 애니메이션 시간 계산
+    const totalCards = (playerCards?.length || 0) + (bankerCards?.length || 0);
+    const cardAnimationTime = totalCards * 1000; // 각 카드당 1초
+    const pauseAfterCards = 1500; // 마지막 카드 후 1.5초 대기
+    const totalAnimationTime = cardAnimationTime + pauseAfterCards;
+    
+    console.log(`카드 애니메이션 시간 계산: ${totalCards}장 × 1초 + ${pauseAfterCards/1000}초 = ${totalAnimationTime}ms`);
+    
+    // 카드 애니메이션 완료 후 결과 표시를 위한 전역 변수 설정
+    window.cardAnimationDone = false;
+    window.showingResults = false;
+    
     // 게임 진행 상태와 결과는 카드 애니메이션 후에 표시되도록 함
     showCardsWithAnimation(playerContainer, bankerContainer, playerCards, bankerCards, playerScore, bankerScore);
     
-    // 결과 표시 (애니메이션 후)
+    // 카드 애니메이션 완료 이벤트 리스너 설정
+    window.cardAnimationCompleteCallback = function() {
+        console.log('카드 애니메이션 완료됨');
+        window.cardAnimationDone = true;
+        
+        // 마지막 카드가 표시된 후 일정 시간 대기 후 결과 표시
+        setTimeout(() => {
+            if (window.showingResults) return; // 이미 결과 표시 중이면 중복 실행 방지
+            window.showingResults = true;
+            
+            displayFinalResult();
+        }, pauseAfterCards);
+    };
+    
+    // 안전장치: 카드 애니메이션이 너무 오래 걸리거나 실패할 경우 결과 표시
     setTimeout(() => {
+        if (!window.showingResults) {
+            console.log('안전장치: 결과 표시 타이머 실행');
+            window.showingResults = true;
+            displayFinalResult();
+        }
+    }, totalAnimationTime);
+    
+    // 최종 결과 표시 함수
+    function displayFinalResult() {
+        console.log('최종 결과 표시');
         // 애니메이션 요소 제거 (있으면)
         const animationElements = gameStatus.querySelectorAll('.status-animation');
         animationElements.forEach(elem => elem.remove());
@@ -270,19 +292,19 @@ function displayGameResult(result) {
             gameTable.appendChild(confetti);
             
             // 초록색 효과가 나타날 때 랭킹 업데이트 요청
-            setTimeout(() => {
-                if (socket) {
-                    debugLog('초록색 효과와 함께 랭킹 업데이트 요청');
-                    socket.emit('request_rankings');
-                }
-                
-                // 게임 기록 추가 - 애니메이션 완료 후 (로컬 스토리지에 저장)
-                updateHistory(gameHistory, true);
-            }, 200);
+            if (socket) {
+                debugLog('초록색 효과와 함께 랭킹 업데이트 요청');
+                socket.emit('request_rankings');
+            }
+            
+            // 게임 기록 추가 - 애니메이션 완료 후 (로컬 스토리지에 저장)
+            updateHistory(gameHistory, true);
             
             // 3초 후 승리 효과 제거
             setTimeout(() => {
-                gameTable.removeChild(confetti);
+                if (gameTable.contains(confetti)) {
+                    gameTable.removeChild(confetti);
+                }
             }, 3000);
         } else {
             // 패배 효과
@@ -291,29 +313,29 @@ function displayGameResult(result) {
             gameTable.classList.add('lose-effect');
             
             // 빨간색 효과가 나타날 때 랭킹 업데이트 요청
-            setTimeout(() => {
-                if (socket) {
-                    debugLog('빨간색 효과와 함께 랭킹 업데이트 요청');
-                    socket.emit('request_rankings');
-                }
-                
-                // 게임 기록 추가 - 애니메이션 완료 후 (로컬 스토리지에 저장)
-                updateHistory(gameHistory, true);
-            }, 200);
+            if (socket) {
+                debugLog('빨간색 효과와 함께 랭킹 업데이트 요청');
+                socket.emit('request_rankings');
+            }
+            
+            // 게임 기록 추가 - 애니메이션 완료 후 (로컬 스토리지에 저장)
+            updateHistory(gameHistory, true);
         }
         
-        // 잔액 업데이트
-        userBalanceDisplay.textContent = `$${newBalance.toFixed(2)}`;
-        if (currentUser) {
-            currentUser.balance = newBalance;
+        // 사용자 잔액 업데이트
+        if (newBalance !== undefined) {
+            updateUserInfo({
+                ...currentUser,
+                balance: newBalance
+            });
         }
         
-        // 게임 상태만 초기화 (카드는 유지)
+        // 게임 진행 중 상태 해제 및 버튼 활성화 (결과 메시지는 그대로 유지)
         isGameInProgress = false;
         placeBetBtn.disabled = false;
         betOptions.forEach(btn => btn.disabled = false);
         betAmount.disabled = false;
-    }, (playerCards.length + bankerCards.length) * 1500 + 500); // 모든 카드 애니메이션 후 0.5초 뒤
+    }
 }
 
 // 카드 애니메이션으로 표시
@@ -323,6 +345,46 @@ function showCardsWithAnimation(playerContainer, bankerContainer, playerCards, b
     // "카드 확인 중" 메시지 표시
     gameStatus.textContent = '카드 확인 중...';
     gameStatus.className = 'info';
+    
+    // 상태 메시지 스타일 추가
+    if (!document.getElementById('game-status-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'game-status-styles';
+        styleElement.textContent = `
+            #game-status {
+                font-family: 'Noto Sans KR', 'Poppins', sans-serif;
+                font-size: 1.2rem;
+                letter-spacing: 0.5px;
+                transition: all 0.3s ease;
+                padding: 8px 12px;
+                border-radius: 4px;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            #game-status.info {
+                color: #1976D2;
+                font-weight: 500;
+                background-color: rgba(25, 118, 210, 0.1);
+            }
+            #game-status.win {
+                color: #4CAF50;
+                font-weight: 600;
+                background-color: rgba(76, 175, 80, 0.1);
+                text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+            }
+            #game-status.lose {
+                color: #F44336;
+                font-weight: 600;
+                background-color: rgba(244, 67, 54, 0.1);
+                text-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+            }
+            #game-status.waiting {
+                color: #FF9800;
+                font-weight: 500;
+                background-color: rgba(255, 152, 0, 0.1);
+            }
+        `;
+        document.head.appendChild(styleElement);
+    }
     
     // 카드 애니메이션 진행 중 상태 설정
     window.cardsAnimationInProgress = true;
@@ -382,6 +444,23 @@ function showCardsWithAnimation(playerContainer, bankerContainer, playerCards, b
     playerScore.textContent = "";
     bankerScore.textContent = "";
     
+    // 플레이어와 뱅커 카드 분리
+    const playerCardsOnly = allCards.filter(card => card.isPlayer);
+    const bankerCardsOnly = allCards.filter(card => !card.isPlayer);
+    
+    // 카드 없는 경우 즉시 콜백 실행 후 리턴
+    if (allCards.length === 0) {
+        playerScore.textContent = playerFinalScore;
+        bankerScore.textContent = bankerFinalScore;
+        window.cardsAnimationInProgress = false;
+        
+        // 애니메이션 완료 콜백 호출
+        if (typeof window.cardAnimationCompleteCallback === 'function') {
+            window.cardAnimationCompleteCallback();
+        }
+        return;
+    }
+    
     // 각 카드를 순차적으로 표시
     allCards.forEach((cardInfo, index) => {
         setTimeout(() => {
@@ -389,13 +468,40 @@ function showCardsWithAnimation(playerContainer, bankerContainer, playerCards, b
             const cardElement = createCardElement(cardInfo.card);
             cardInfo.container.appendChild(cardElement);
             
-            // 게임 상태 업데이트
-            gameStatus.textContent = `카드 확인 중... (${index + 1}/${allCards.length})`;
+            // 게임 상태 메시지는 항상 동일하게 유지 (괄호 없음)
+            gameStatus.textContent = '카드 확인 중...';
             
             // 카드 애니메이션 효과
             setTimeout(() => {
                 cardElement.classList.add('show');
             }, 50);
+            
+            // 현재까지 보여진 카드들을 기준으로 실시간 점수 계산
+            // 플레이어 점수 계산
+            const playerCardsShown = playerCardsOnly.filter((_, i) => {
+                const cardIndex = allCards.findIndex(c => c === playerCardsOnly[i]);
+                return cardIndex <= index;
+            });
+            if (playerCardsShown.length > 0) {
+                const currentPlayerScore = calculateScore(
+                    playerCards,
+                    playerCardsShown[playerCardsShown.length - 1].index
+                );
+                playerScore.textContent = currentPlayerScore;
+            }
+            
+            // 뱅커 점수 계산
+            const bankerCardsShown = bankerCardsOnly.filter((_, i) => {
+                const cardIndex = allCards.findIndex(c => c === bankerCardsOnly[i]);
+                return cardIndex <= index;
+            });
+            if (bankerCardsShown.length > 0) {
+                const currentBankerScore = calculateScore(
+                    bankerCards,
+                    bankerCardsShown[bankerCardsShown.length - 1].index
+                );
+                bankerScore.textContent = currentBankerScore;
+            }
             
             // 마지막 카드가 표시된 경우에만 최종 점수 표시
             if (index === allCards.length - 1) {
@@ -405,17 +511,15 @@ function showCardsWithAnimation(playerContainer, bankerContainer, playerCards, b
                     bankerScore.textContent = bankerFinalScore;
                     // 카드 애니메이션 완료 상태로 설정
                     window.cardsAnimationInProgress = false;
-                }, 1000); // 마지막 카드 표시 후 1초 뒤에 최종 점수 표시
+                    
+                    // 애니메이션 완료 콜백 호출
+                    if (typeof window.cardAnimationCompleteCallback === 'function') {
+                        window.cardAnimationCompleteCallback();
+                    }
+                }, 500); // 마지막 카드 표시 후 0.5초 뒤에 최종 점수 표시
             }
-        }, 1500 * index); // 각 카드마다 1.5초 간격
+        }, 1000 * index); // 각 카드마다 1초 간격 (약간 빠르게 진행)
     });
-    
-    // 카드가 없는 경우 바로 점수 표시
-    if (allCards.length === 0) {
-        playerScore.textContent = playerFinalScore;
-        bankerScore.textContent = bankerFinalScore;
-        window.cardsAnimationInProgress = false;
-    }
 }
 
 // 개선된 카드 요소 생성
@@ -473,8 +577,15 @@ function resetGameState() {
     placeBetBtn.disabled = false;
     betOptions.forEach(btn => btn.disabled = false);
     betAmount.disabled = false;
-    gameStatus.textContent = '베팅을 선택하세요';
-    gameStatus.className = '';
+    
+    // 결과 메시지가 있으면 그대로 유지, 없으면 기본 메시지 표시
+    if (!gameStatus.textContent || 
+        !gameStatus.className || 
+        (!gameStatus.className.includes('win') && !gameStatus.className.includes('lose'))) {
+        gameStatus.textContent = '베팅을 선택하세요';
+        gameStatus.className = '';
+    }
+    
     // 카드는 clearCards()를 호출하지 않아 유지됨
 }
 
@@ -737,12 +848,25 @@ function updateHistory(historyItem, shouldSave = true) {
                 border-radius: 4px;
                 background-color: rgba(0, 0, 0, 0.05);
                 margin-left: 5px;
+                width: fit-content;
+                max-width: 70px;
+                overflow: hidden;
+                white-space: nowrap;
             }
             .history-result.win {
                 color: var(--success-color, #20c997);
             }
             .history-result.loss {
                 color: var(--error-color, #ff6b6b);
+            }
+            /* 이모티콘 스타일 수정 */
+            .result-icon {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+                text-align: center;
+                font-size: 12px;
             }
             /* 점수와 카드 영역 개선 */
             .history-cards {
@@ -912,7 +1036,7 @@ function updateHistory(historyItem, shouldSave = true) {
                     <span class="history-bet" title="베팅: ${betChoiceText} $${betAmount.toFixed(2)}">
                         <strong>${betChoiceText}</strong> <span class="bet-amount">$${betAmount.toFixed(2)}</span>
                     </span>
-                    <span class="history-result ${winLossClass}" title="${winLossText}">${winLossIcon} ${winLossText}</span>
+                    <span class="history-result ${winLossClass}" title="${winLossText}"><span class="result-icon">${winLossIcon}</span> ${winLossText}</span>
                 </div>
                 <div class="history-cards">
                     <span class="history-result-label ${resultClass}" title="${resultText} 승리">${resultLabel}</span>
@@ -1574,6 +1698,13 @@ function setupSocketListeners() {
     socket.on('game_result', (result) => {
         console.log('베팅 결과 수신:', result);
         
+        // 베팅 진행 중 메시지 즉시 제거
+        gameStatus.textContent = '카드 확인 중...';
+        
+        // 애니메이션 요소 제거 (있으면)
+        const animationElements = gameStatus.querySelectorAll('.status-animation');
+        animationElements.forEach(elem => elem.remove());
+        
         // 게임 결과 표시
         displayGameResult(result);
     });
@@ -1695,7 +1826,7 @@ function setupSocketListeners() {
             };
             
             // 다른 플레이어의 게임도 애니메이션 처리하여 표시
-            const cardsDelay = (data.playerCards.length + data.bankerCards.length) * 1500; // 카드당 1.5초
+            const cardsDelay = 0; // 대기 시간 제거
             
             // 기존 진행 중 항목 존재 여부에 따라 처리
             if (existingInProgressItem) {
@@ -1707,20 +1838,16 @@ function setupSocketListeners() {
                     statusElement.textContent = '🔄 카드 확인 중...';
                 }
                 
-                // 카드 확인 시간(애니메이션) 후에 완료된 게임으로 업데이트
-                setTimeout(() => {
-                    // 기존 진행 중 항목 제거
-                    existingInProgressItem.remove();
-                    
-                    // 완료된 게임 추가 (로컬 스토리지에는 저장하지 않음)
-                    updateHistory(historyItem, true); // 로컬 스토리지에 저장
-                }, cardsDelay); // 카드 개수에 따른 애니메이션 딜레이
+                // 지연 없이 바로 완료된 게임으로 업데이트
+                existingInProgressItem.remove();
+                
+                // 완료된 게임 추가 (로컬 스토리지에 저장)
+                updateHistory(historyItem, true);
             } else {
                 // 이미 기존 항목이 제거되었거나 없는 경우, 게임 결과를 바로 추가
-                // 하지만 여전히 카드 애니메이션 시간만큼 지연시킴
-                debugLog(`진행 중 게임 없이 완료된 게임 추가(딜레이 적용): ${data.gameId}`);
+                debugLog(`진행 중 게임 없이 완료된 게임 추가: ${data.gameId}`);
                 
-                // 진행 중인 게임으로 먼저 표시 후 애니메이션 완료 후 결과 표시
+                // 진행 중인 게임으로 먼저 표시 후 바로 결과 표시
                 const inProgressItem = {
                     gameId: data.gameId,
                     player: data.player,
@@ -1734,17 +1861,14 @@ function setupSocketListeners() {
                 // 진행 중인 게임으로 먼저 표시 (최상단에 표시되도록)
                 updateHistory(inProgressItem, false);
                 
-                // 카드 애니메이션 시간 후에 완료된 게임으로 업데이트
-                setTimeout(() => {
-                    // "게임 진행 중" 항목 제거
-                    const tempProgressItem = document.querySelector(`.history-item[data-game-id="${data.gameId}"][data-status="in_progress"]`);
-                    if (tempProgressItem) {
-                        tempProgressItem.remove();
-                    }
-                    
-                    // 완료된 게임 추가 (로컬 스토리지에 저장)
-                    updateHistory(historyItem, true);
-                }, cardsDelay); // 카드 개수에 따른 애니메이션 딜레이
+                // 즉시 "게임 진행 중" 항목 제거
+                const tempProgressItem = document.querySelector(`.history-item[data-game-id="${data.gameId}"][data-status="in_progress"]`);
+                if (tempProgressItem) {
+                    tempProgressItem.remove();
+                }
+                
+                // 완료된 게임 추가 (로컬 스토리지에 저장)
+                updateHistory(historyItem, true);
             }
         } catch (error) {
             console.error('게임 기록 처리 오류:', error);

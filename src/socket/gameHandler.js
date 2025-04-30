@@ -209,7 +209,7 @@ function setupGameSocket(io) {
         
         // 결과 계산 (카드 애니메이션 완료 후에 결과 전송)
         // 각 카드당 1.5초 + 추가 시간 고려
-        const animationTime = 1500 * 6 + 500; // 최대 6장의 카드 + 0.5초 여유
+        const animationTime = 1500 * 4 + 1000; // 최대 4장의 카드 + 1초 여유 (바카라는 최대 3~4장이 일반적)
         
         setTimeout(async () => {
           try {
