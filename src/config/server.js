@@ -24,4 +24,9 @@ app.use(session({
   cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30일
 }));
 
+const SERVER_CONFIG = {
+    port: process.env.PORT || 3002,
+    /* ... 다른 설정들 ... */
+};
+
 module.exports = { app, server, io }; 

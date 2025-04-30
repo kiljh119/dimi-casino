@@ -1,0 +1,313 @@
+/* 랭킹 및 게임 기록 페이지 스타일 */
+
+.tabs-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 0 20px;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #283747;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #1c2630;
+    color: #ccc;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    margin-right: 3px;
+}
+
+.tab-btn:hover {
+    background-color: #34495e;
+    color: #fff;
+}
+
+.tab-btn.active {
+    background-color: #3498db;
+    color: #fff;
+    font-weight: bold;
+}
+
+.last-update {
+    font-size: 14px;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: #3498db;
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: transform 0.3s;
+}
+
+.refresh-btn:hover {
+    transform: rotate(180deg);
+}
+
+.tab-content {
+    padding: 0 20px;
+}
+
+.tab-panel {
+    display: none;
+    animation: fadeIn 0.5s;
+    background-color: #1c2630;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #34495e;
+}
+
+.panel-header h3 {
+    font-size: 18px;
+    color: #fff;
+    margin: 0;
+}
+
+.clear-btn {
+    background-color: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.clear-btn:hover {
+    background-color: #c0392b;
+}
+
+/* 랭킹 테이블 스타일 */
+.rankings-container {
+    overflow-x: auto;
+}
+
+#rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    color: #ddd;
+}
+
+#rankings-table th, 
+#rankings-table td {
+    padding: 12px 15px;
+    text-align: center;
+}
+
+#rankings-table th {
+    background-color: #34495e;
+    color: #fff;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+}
+
+#rankings-table tbody tr {
+    background-color: #1c2630;
+}
+
+#rankings-table tbody tr:nth-child(even) {
+    background-color: #283747;
+}
+
+#rankings-table tbody tr:hover {
+    background-color: #2c3e50;
+}
+
+/* 순위 강조 */
+.rank-1, .rank-2, .rank-3 {
+    font-weight: bold;
+}
+
+.rank-1 {
+    color: #f1c40f !important; /* 금색 */
+}
+
+.rank-2 {
+    color: #bdc3c7 !important; /* 은색 */
+}
+
+.rank-3 {
+    color: #cd7f32 !important; /* 동색 */
+}
+
+.positive {
+    color: #2ecc71;
+}
+
+.negative {
+    color: #e74c3c;
+}
+
+/* 게임 기록 스타일 */
+.history-container {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.history-item {
+    background-color: #283747;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.history-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #aaa;
+}
+
+.history-body {
+    display: flex;
+    align-items: center;
+}
+
+.history-result {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.player-win {
+    background-color: #3498db;
+    color: #fff;
+}
+
+.banker-win {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.tie {
+    background-color: #2ecc71;
+    color: #fff;
+}
+
+.history-score {
+    background-color: #34495e;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.history-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.history-player {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.current-user {
+    color: #3498db;
+}
+
+.history-bet {
+    font-size: 14px;
+    color: #f1c40f;
+}
+
+.history-result-text {
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.history-result-text.win {
+    color: #2ecc71;
+}
+
+.history-result-text.lose {
+    color: #e74c3c;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .tabs-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .tabs {
+        width: 100%;
+    }
+    
+    .tab-btn {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .last-update {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    #rankings-table th, 
+    #rankings-table td {
+        padding: 8px;
+        font-size: 14px;
+    }
+} 

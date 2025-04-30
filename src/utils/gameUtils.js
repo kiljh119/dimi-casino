@@ -20,17 +20,6 @@ function calculateHandValue(hand) {
 
 // 게임 결과 계산 함수
 function calculateGameResult(choice, amount) {
-  // 숫자로 변환 (문자열 또는 다른 타입이 들어올 경우 대비)
-  let betAmount = 0;
-  try {
-    betAmount = parseFloat(amount);
-    if (isNaN(betAmount) || betAmount < 0) {
-      betAmount = 0;
-    }
-  } catch (e) {
-    betAmount = 0;
-  }
-  
   // 카드 생성
   const playerCards = [drawCard(), drawCard()];
   const bankerCards = [drawCard(), drawCard()];
@@ -58,9 +47,9 @@ function calculateGameResult(choice, amount) {
       (bankerScore > playerScore && choice === 'banker') || 
       (playerScore === bankerScore && choice === 'tie')) {
     isWin = true;
-    if (choice === 'player') winAmount = betAmount;
-    if (choice === 'banker') winAmount = betAmount * 0.95;
-    if (choice === 'tie') winAmount = betAmount * 8;
+    if (choice === 'player') winAmount = amount;
+    if (choice === 'banker') winAmount = amount * 0.95;
+    if (choice === 'tie') winAmount = amount * 8;
   }
   
   return {

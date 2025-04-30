@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랭킹 및 게임 기록 - 카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="leaderboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 랭킹 및 게임 기록 화면 -->
+        <div id="leaderboard-screen" class="screen">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                        <h2>랭킹 및 게임 기록</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-name"></span>
+                        <span id="user-balance"></span>
+                    </div>
+                    <button id="logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+                </div>
+            </header>
+
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="rankings">랭킹</button>
+                    <button class="tab-btn" data-tab="history">게임 기록</button>
+                </div>
+                
+                <div id="last-update" class="last-update">
+                    마지막 업데이트: <span id="update-time"></span>
+                    <button id="refresh-btn" class="refresh-btn"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+
+            <div class="tab-content">
+                <!-- 랭킹 탭 -->
+                <div id="rankings-tab" class="tab-panel active">
+                    <div class="panel-header">
+                        <h3>유저 랭킹</h3>
+                    </div>
+                    
+                    <div class="rankings-container">
+                        <table id="rankings-table">
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>이름</th>
+                                    <th>수익</th>
+                                    <th>승률</th>
+                                    <th>총 게임</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rankings-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 게임 기록 탭 -->
+                <div id="history-tab" class="tab-panel">
+                    <div class="panel-header">
+                        <h3>내 게임 기록</h3>
+                        <button id="clear-history-btn" class="clear-btn" title="게임 기록 초기화">
+                            <i class="fas fa-trash-alt"></i> 기록 삭제
+                        </button>
+                    </div>
+                    
+                    <div class="history-container">
+                        <ul id="history-list" class="history-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 소켓 설정 -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        function socketInitFn() {
+            const socket = io();
+            console.log("Socket initialized");
+            return socket;
+        }
+    </script>
+    
+    <!-- 로컬 스토리지에서 유저 정보 확인 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userString = localStorage.getItem('user');
+            window.currentUser = userString ? JSON.parse(userString) : null;
+            
+            if (!window.currentUser) {
+                window.location.href = '/';
+            }
+        });
+    </script>
+    
+    <!-- 페이지 스크립트 -->
+    <script src="leaderboard.js"></script>
+</body>
+</html> 

@@ -136,22 +136,11 @@ function setupGameSocket(io) {
         return;
       }
       
-      const { choice, amount, gameId } = betData;
+      const { choice, amount } = betData;
       const username = socket.username;
       const userId = socket.userId;
       
       try {
-        // 베팅 금액을 숫자로 변환 (문자열이 들어올 경우 대비)
-        const betAmount = parseFloat(amount);
-        
-        if (isNaN(betAmount) || betAmount <= 0) {
-          socket.emit('bet_response', { 
-            success: false, 
-            message: '유효하지 않은 베팅 금액입니다.' 
-          });
-          return;
-        }
-        
         // 데이터베이스에서 현재 잔액 확인
         const user = await User.findById(userId);
         
@@ -164,62 +153,48 @@ function setupGameSocket(io) {
         }
         
         // 잔액 확인
-        if (betAmount > user.balance) {
+        if (amount <= 0 || amount > user.balance) {
           socket.emit('bet_response', { 
             success: false, 
-            message: '베팅 금액이 보유 잔액보다 많습니다.' 
+            message: '유효하지 않은 베팅 금액입니다.' 
           });
           return;
         }
         
-        // 게임 ID 생성 (클라이언트에서 전송한 ID 사용 또는 새로 생성)
-        const gameIdentifier = gameId || `game_${username}_${Date.now()}`;
+        // 게임 ID 생성
+        const gameId = `game_${username}_${Date.now()}`;
         
-        console.log('게임 시작:', gameIdentifier, username, choice, betAmount);
+        console.log('게임 시작:', gameId, username, choice, amount);
         
         // 게임 정보 저장
-        games[gameIdentifier] = {
-          id: gameIdentifier,
+        games[gameId] = {
+          id: gameId,
           userId: userId,
           player: username,
           choice: choice,
-          bet: betAmount,
+          bet: amount,
           status: 'started',
           time: Date.now()
         };
         
-        // 게임 시작 데이터 유효성 확인 (클라이언트로 보내기 전 검증)
-        if (!gameIdentifier || !username || !choice || isNaN(betAmount) || betAmount <= 0) {
-          console.error('유효하지 않은 게임 시작 데이터:', { gameIdentifier, username, choice, betAmount });
-          socket.emit('bet_response', { 
-            success: false, 
-            message: '게임 데이터 오류' 
-          });
-          return;
-        }
-        
         // 모든 사용자에게 새 게임 알림
         io.emit('game_started', {
-          gameId: gameIdentifier,
+          gameId,
           player: username,
           choice,
-          bet: betAmount.toFixed(2),
-          time: Date.now() // 시간 정보 추가
+          bet: amount
         });
         
-        // 결과 계산 (카드 애니메이션 완료 후에 결과 전송)
-        // 각 카드당 1.5초 + 추가 시간 고려
-        const animationTime = 1500 * 4 + 1000; // 최대 4장의 카드 + 1초 여유 (바카라는 최대 3~4장이 일반적)
-        
+        // 결과 계산 (1.5초 후에 결과 전송)
         setTimeout(async () => {
           try {
             // 카드 생성 및 결과 계산
-            const result = calculateGameResult(choice, betAmount);
+            const result = calculateGameResult(choice, amount);
             const { playerCards, bankerCards, playerScore, bankerScore, isWin, winAmount } = result;
             
             // 게임 결과 업데이트
-            games[gameIdentifier] = {
-              ...games[gameIdentifier],
+            games[gameId] = {
+              ...games[gameId],
               playerCards,
               bankerCards,
               playerScore,
@@ -237,13 +212,13 @@ function setupGameSocket(io) {
               
               try {
                 // 사용자 잔액 및 통계 업데이트
-                await User.updateBalance(userId, isWin ? winAmount : betAmount, isWin);
+                await User.updateBalance(userId, isWin ? winAmount : amount, isWin);
                 
                 // 게임 히스토리 저장
                 await GameHistory.add(
                   userId, 
                   choice, 
-                  isWin ? winAmount : betAmount, 
+                  isWin ? winAmount : amount, 
                   isWin ? 'win' : 'lose', 
                   playerScore, 
                   bankerScore
@@ -254,75 +229,48 @@ function setupGameSocket(io) {
                 // 현재 잔액 조회
                 const updatedUser = await User.findById(userId);
                 const timeStr = new Date().toLocaleTimeString();
-                // 히스토리 항목 생성 - 시간과 게임 결과 정보 포함
-                const historyItem = `[${timeStr}] ${isWin ? '승리!' : '패배!'} ${isWin ? '+$'+winAmount.toFixed(2) : '-$'+betAmount.toFixed(2)} (P${playerScore}:B${bankerScore})`;
+                const historyItem = `[${timeStr}] ${isWin ? '승리!' : '패배!'} ${isWin ? '+$'+winAmount.toFixed(2) : '-$'+amount} (P${playerScore}:B${bankerScore})`;
                 
                 // 결과 전송
                 socket.emit('game_result', {
-                  gameId: gameIdentifier,
+                  gameId,
                   playerCards,
                   bankerCards,
                   playerScore,
                   bankerScore,
                   isWin,
                   winAmount,
-                  bet: betAmount,
+                  bet: amount,
                   newBalance: updatedUser ? updatedUser.balance : 0,
                   historyItem,
                   choice
                 });
                 
-                // 모든 사용자에게 게임 결과 알림 - 필요한 모든 정보 포함
-                const gameCompletedData = {
-                  gameId: gameIdentifier,
-                  player: username || '알 수 없음',
-                  choice: choice || 'unknown',
-                  bet: betAmount > 0 ? betAmount.toFixed(2) : '0.00',
-                  isWin: !!isWin,
-                  winAmount: isWin && winAmount > 0 ? winAmount.toFixed(2) : '0.00',
-                  playerScore: playerScore >= 0 ? playerScore : 0,
-                  bankerScore: bankerScore >= 0 ? bankerScore : 0,
-                  playerCards: Array.isArray(playerCards) ? playerCards : [],
-                  bankerCards: Array.isArray(bankerCards) ? bankerCards : [],
-                  status: 'completed',
-                  time: Date.now(),
-                  winner: playerScore > bankerScore ? 'player' : 
-                          bankerScore > playerScore ? 'banker' : 'tie',
-                  historyItem
-                };
-                
-                // 게임 완료 데이터 유효성 검사
-                if (!gameCompletedData.gameId || !gameCompletedData.player || !gameCompletedData.choice) {
-                  console.error('유효하지 않은 게임 완료 데이터:', gameCompletedData);
-                  return;
-                }
-                
-                // 중요 필드 데이터 형식 검증
-                if (typeof gameCompletedData.player !== 'string' || 
-                    !['player', 'banker', 'tie'].includes(gameCompletedData.choice) ||
-                    !Array.isArray(gameCompletedData.playerCards) || 
-                    !Array.isArray(gameCompletedData.bankerCards)) {
-                  console.error('게임 완료 데이터 형식 오류:', gameCompletedData);
-                  return;
-                }
-                
-                // 점수 정보 검증
-                if (typeof gameCompletedData.playerScore !== 'number' || 
-                    typeof gameCompletedData.bankerScore !== 'number') {
-                  console.error('게임 완료 점수 데이터 형식 오류:', gameCompletedData);
-                  return;
-                }
-                
-                // 승리자 정보 검증
-                if (!['player', 'banker', 'tie'].includes(gameCompletedData.winner)) {
-                  console.error('게임 완료 승리자 데이터 형식 오류:', gameCompletedData);
-                  return;
-                }
-                
-                io.emit('game_completed', gameCompletedData);
-                
-                // 랭킹 데이터 계산 및 전송
-                updateAndSendRankings(io);
+                // 게임 완료 및 랭킹 업데이트는 베팅 후 정확히 10초 후에 처리
+                setTimeout(() => {
+                  // 모든 사용자에게 게임 결과 알림
+                  io.emit('game_completed', {
+                    gameId,
+                    player: username,
+                    choice,
+                    bet: amount,
+                    isWin,
+                    playerScore,
+                    bankerScore,
+                    status: 'completed',
+                    time: Date.now(),
+                    winner: playerScore > bankerScore ? 'player' : 
+                            bankerScore > playerScore ? 'banker' : 'tie'
+                  });
+                  
+                  // 랭킹 데이터 계산 및 전송
+                  updateAndSendRankings(io);
+                  
+                  // 시스템 메시지로 알림
+                  io.emit('system_message', `베팅 후 10초: ${username}님의 게임 결과가 랭킹과 기록에 반영되었습니다.`);
+                  
+                  console.log('10초 후 게임 결과 및 랭킹 업데이트 완료:', gameId);
+                }, 10000); // 베팅 확정 후 정확히 10초 후
               } catch (error) {
                 db.run('ROLLBACK');
                 console.error('Game update error:', error);
@@ -333,7 +281,7 @@ function setupGameSocket(io) {
             console.error('Game result error:', error);
             socket.emit('error', { message: '게임 결과 처리 중 오류가 발생했습니다.' });
           }
-        }, animationTime); // 모든 카드 애니메이션이 완료될 시간 고려
+        }, 1500); // 1.5초 후 결과 계산 (카드 애니메이션 처리 시간)
       } catch (error) {
         console.error('Bet error:', error);
         socket.emit('bet_response', { 
@@ -423,6 +371,43 @@ function setupGameSocket(io) {
       return filteredMessage;
     }
     
+    // 게임 데이터 요청
+    socket.on('request_game_data', async () => {
+      console.log('게임 데이터 요청:', socket.username);
+      
+      if (!socket.username) {
+        console.log('로그인 하지 않은 사용자의 데이터 요청');
+        return;
+      }
+      
+      try {
+        // 랭킹 데이터 가져오기
+        const rankings = await User.getTopRankings(10);
+        console.log('랭킹 데이터 가져옴:', rankings.length);
+        
+        // 게임 히스토리 가져오기
+        let history = [];
+        if (socket.userId) {
+          history = await GameHistory.getFormattedUserHistory(socket.userId);
+          console.log('사용자 게임 기록 가져옴:', history.length);
+        }
+        
+        // 온라인 플레이어 목록
+        const onlinePlayersList = Object.keys(onlinePlayers);
+        
+        // 데이터 전송
+        console.log(`${socket.username}에게 게임 데이터 전송: 랭킹=${rankings.length}, 히스토리=${history.length}`);
+        socket.emit('game_data', {
+          rankings,
+          history,
+          onlinePlayers: onlinePlayersList
+        });
+      } catch (error) {
+        console.error('게임 데이터 요청 처리 중 오류:', error);
+        socket.emit('error_message', '데이터를 불러오는 중 오류가 발생했습니다.');
+      }
+    });
+    
     // 연결 종료
     socket.on('disconnect', () => {
       if (socket.username && onlinePlayers[socket.username]) {
@@ -441,7 +426,8 @@ function setupGameSocket(io) {
 async function updateAndSendRankings(io) {
   try {
     console.log('랭킹 업데이트 시작');
-    const rankings = await User.getTopRankings(10); // 상위 10명으로 증가
+    const rankings = await User.getTopRankings();
+    console.log('랭킹 데이터:', rankings.length);
     
     // 소켓 객체 검증
     if (!io || typeof io.emit !== 'function') {
@@ -449,13 +435,8 @@ async function updateAndSendRankings(io) {
       return;
     }
     
-    if (!rankings || rankings.length === 0) {
-      console.log('랭킹 데이터가 존재하지 않습니다.');
-      return;
-    }
-    
     io.emit('rankings_update', rankings);
-    console.log('랭킹 업데이트 완료: 사용자 수', rankings.length);
+    console.log('랭킹 업데이트 완료');
   } catch (error) {
     console.error('Rankings update error:', error);
   }

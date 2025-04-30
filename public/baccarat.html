@@ -23,7 +23,6 @@
                         <span id="user-name"></span>
                         <span id="user-balance"></span>
                     </div>
-                    <button id="logout-btn" class="logout-button"> 로그아웃</button>
                 </div>
             </header>
 
@@ -57,52 +56,33 @@
                             </div>
                             <button id="place-bet-btn" disabled>베팅 확정</button>
                         </div>
-                    </div>
-
-                    <div class="game-history">
-                        <div class="history-header-container">
-                            <h3>게임 기록</h3>
-                            <button id="clear-history-btn" class="clear-btn" title="게임 기록 초기화">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                        
+                        <div class="game-links">
+                            <a href="./ranking-fixed.html" class="link-btn">
+                                <i class="fas fa-trophy"></i> 랭킹 및 게임 기록 보기
+                            </a>
                         </div>
-                        <ul id="history-list"></ul>
                     </div>
                 </div>
 
                 <div class="side-panel">
-                    <div class="rankings-panel">
-                        <h3>랭킹</h3>
-                        <table id="rankings-table">
-                            <thead>
-                                <tr>
-                                    <th>순위</th>
-                                    <th>이름</th>
-                                    <th>수익</th>
-                                    <th>승률</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rankings-body"></tbody>
-                        </table>
+                    <div class="chat-panel">
+                        <h3>채팅</h3>
+                        <div class="chat-container">
+                            <div id="chat-messages" class="chat-messages"></div>
+                            <div class="chat-input-container">
+                                <input type="text" id="chat-input" placeholder="메시지 입력...">
+                                <button id="send-chat-btn">전송</button>
+                            </div>
+                            <button id="clear-chat-btn" class="clear-btn" title="채팅 내역 삭제">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="online-players">
                         <h3>접속자 목록</h3>
                         <ul id="online-players-list"></ul>
-                    </div>
-
-                    <div class="chat-panel">
-                        <div class="chat-header-container">
-                            <h3>채팅</h3>
-                            <button id="clear-chat-btn" class="clear-btn" title="채팅 기록 초기화">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                        <div class="chat-messages" id="chat-messages"></div>
-                        <div class="chat-input">
-                            <input type="text" id="chat-input" placeholder="메시지 입력...">
-                            <button id="send-chat-btn">전송</button>
-                        </div>
                     </div>
                 </div>
             </div>

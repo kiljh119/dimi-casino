@@ -71,26 +71,28 @@ class User {
   }
 
   // 상위 랭킹 가져오기
-  static getTopRankings(limit = 5) {
+  static getTopRankings(limit = 10) {
     return new Promise((resolve, reject) => {
       db.all(
-        `SELECT username, balance, profit, wins, losses,
+        `SELECT id, username, balance, profit, wins, losses,
+         (wins + losses) as total_games,
          CASE WHEN (wins + losses) > 0 THEN (wins * 100.0 / (wins + losses)) ELSE 0 END as win_rate
          FROM users
-         ORDER BY profit DESC
+         ORDER BY balance DESC
          LIMIT ?`,
         [limit],
         (err, rankings) => {
           if (err) return reject(err);
           
           const formattedRankings = rankings.map(user => ({
+            id: user.id,
             username: user.username,
             balance: user.balance || 0,
             profit: user.profit || 0,
             wins: user.wins || 0,
             losses: user.losses || 0,
-            games: (user.wins || 0) + (user.losses || 0),
-            winRate: user.win_rate.toFixed(1)
+            totalGames: user.total_games || 0,
+            winRate: (user.wins && user.total_games) ? (user.wins / user.total_games) : 0
           }));
           
           resolve(formattedRankings);
