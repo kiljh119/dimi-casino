@@ -12,12 +12,26 @@ function setupGameSocket(io) {
   // 블랙잭 소켓 설정
   setupBlackjackSocket(io);
   
+  console.log('게임 소켓 핸들러 설정 완료');
+  
   // 모든 소켓 연결에 대한 이벤트 처리
   io.on('connection', (socket) => {
     console.log('새로운 사용자가 연결되었습니다:', socket.id);
     
+    // 초기 데이터 전송
+    try {
+      // 랭킹 데이터 전송
+      updateAndSendRankings(io);
+      
+      // 온라인 플레이어 목록 전송
+      updateOnlinePlayers(io);
+    } catch (error) {
+      console.error('초기 데이터 전송 오류:', error);
+    }
+    
     // 유저 로그인
     socket.on('login', async (userData) => {
+      console.log('로그인 시도:', userData);
       const username = userData.username;
       
       // 이미 로그인된 사용자인지 확인
@@ -54,6 +68,8 @@ function setupGameSocket(io) {
         // 히스토리 조회
         const history = await GameHistory.getFormattedUserHistory(user.id);
         
+        console.log('로그인 성공:', username, '사용자 수:', Object.keys(onlinePlayers).length);
+        
         // 로그인 성공 응답
         socket.emit('login_response', { 
           success: true, 
@@ -66,7 +82,7 @@ function setupGameSocket(io) {
         });
         
         // 모든 사용자에게 접속자 목록 업데이트 알림
-        io.emit('online_players_update', Object.keys(onlinePlayers));
+        updateOnlinePlayers(io);
         
         // 랭킹 업데이트
         updateAndSendRankings(io);
@@ -94,7 +110,16 @@ function setupGameSocket(io) {
     
     // 베팅 시작
     socket.on('place_bet', async (betData) => {
-      if (!socket.username || !socket.userId) return;
+      console.log('베팅 시도:', socket.username, betData);
+      
+      if (!socket.username || !socket.userId) {
+        console.log('베팅 실패: 로그인 필요', socket.id);
+        socket.emit('bet_response', { 
+          success: false, 
+          message: '로그인이 필요합니다.' 
+        });
+        return;
+      }
       
       const { choice, amount } = betData;
       const username = socket.username;
@@ -123,6 +148,8 @@ function setupGameSocket(io) {
         
         // 게임 ID 생성
         const gameId = `game_${username}_${Date.now()}`;
+        
+        console.log('게임 시작:', gameId, username, choice, amount);
         
         // 게임 정보 저장
         games[gameId] = {
@@ -263,11 +290,39 @@ function setupGameSocket(io) {
 // 랭킹 업데이트 및 전송 함수
 async function updateAndSendRankings(io) {
   try {
+    console.log('랭킹 업데이트 시작');
     const rankings = await User.getTopRankings();
+    console.log('랭킹 데이터:', rankings.length);
+    
+    // 소켓 객체 검증
+    if (!io || typeof io.emit !== 'function') {
+      console.error('IO 객체가 유효하지 않습니다:', io);
+      return;
+    }
+    
     io.emit('rankings_update', rankings);
+    console.log('랭킹 업데이트 완료');
   } catch (error) {
     console.error('Rankings update error:', error);
   }
 }
 
-module.exports = { setupGameSocket, onlinePlayers, games }; 
+// 온라인 플레이어 업데이트 함수 (추가)
+function updateOnlinePlayers(io) {
+  // 소켓 객체 검증
+  if (!io || typeof io.emit !== 'function') {
+    console.error('IO 객체가 유효하지 않습니다:', io);
+    return;
+  }
+  
+  io.emit('online_players_update', Object.keys(onlinePlayers));
+  console.log('온라인 플레이어 업데이트 완료:', Object.keys(onlinePlayers).length);
+}
+
+module.exports = { 
+  setupGameSocket, 
+  onlinePlayers, 
+  games,
+  updateAndSendRankings,
+  updateOnlinePlayers
+}; 

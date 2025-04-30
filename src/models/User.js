@@ -71,7 +71,7 @@ class User {
   }
 
   // 상위 랭킹 가져오기
-  static getTopRankings(limit = 50) {
+  static getTopRankings(limit = 5) {
     return new Promise((resolve, reject) => {
       db.all(
         `SELECT username, profit, wins, losses,
@@ -175,6 +175,74 @@ class User {
           );
         }
       );
+    });
+  }
+  
+  // 관리자용 - 계정 삭제
+  static deleteUser(userId) {
+    return new Promise((resolve, reject) => {
+      // 트랜잭션 시작
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        
+        try {
+          // 관리자 계정은 삭제 불가
+          db.get(
+            'SELECT username FROM users WHERE id = ?',
+            [userId],
+            (err, user) => {
+              if (err) {
+                db.run('ROLLBACK');
+                return reject(err);
+              }
+              
+              if (!user) {
+                db.run('ROLLBACK');
+                return reject(new Error('사용자를 찾을 수 없습니다.'));
+              }
+              
+              if (user.username === 'admin') {
+                db.run('ROLLBACK');
+                return reject(new Error('관리자 계정은 삭제할 수 없습니다.'));
+              }
+              
+              // 사용자의 게임 히스토리 삭제
+              db.run(
+                'DELETE FROM game_history WHERE user_id = ?',
+                [userId],
+                (err) => {
+                  if (err) {
+                    db.run('ROLLBACK');
+                    return reject(err);
+                  }
+                  
+                  // 사용자 계정 삭제
+                  db.run(
+                    'DELETE FROM users WHERE id = ?',
+                    [userId],
+                    function (err) {
+                      if (err) {
+                        db.run('ROLLBACK');
+                        return reject(err);
+                      }
+                      
+                      db.run('COMMIT');
+                      resolve({
+                        success: true,
+                        message: '계정이 성공적으로 삭제되었습니다.',
+                        changes: this.changes
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        } catch (error) {
+          db.run('ROLLBACK');
+          reject(error);
+        }
+      });
     });
   }
 }

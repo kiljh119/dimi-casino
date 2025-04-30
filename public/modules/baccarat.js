@@ -40,6 +40,10 @@ function handlePlaceBet() {
     gameStatus.textContent = '게임 진행 중...';
     gameStatus.className = '';
     
+    // 이전 게임의 효과 제거
+    const gameTable = document.querySelector('.game-table');
+    gameTable.classList.remove('win-effect', 'lose-effect');
+    
     // 소켓을 통해 베팅 요청
     socketInstance.emit('place_bet', {
         choice: selectedBet,
@@ -56,69 +60,175 @@ function updateBetUI() {
 function displayGameResult(result) {
     const { gameId, playerCards: pCards, bankerCards: bCards, playerScore: pScore, bankerScore: bScore, isWin, winAmount, balance } = result;
     
-    // 카드 표시
-    displayCards(playerCards, pCards);
-    displayCards(bankerCards, bCards);
+    // 초기화
+    clearCards();
     
-    // 점수 표시
-    playerScore.textContent = pScore;
-    bankerScore.textContent = bScore;
+    // 카드 애니메이션으로 표시 (번갈아가면서)
+    showCardsWithAnimation(playerCards, bankerCards, pCards, bCards, pScore, bScore);
     
-    // 결과 표시
-    if (isWin) {
-        gameStatus.textContent = `승리! $${winAmount.toFixed(2)} 획득`;
-        gameStatus.className = 'win';
-    } else {
-        gameStatus.textContent = `패배! $${parseFloat(betAmount.value).toFixed(2)} 손실`;
-        gameStatus.className = 'lose';
-    }
-    
-    // 잔액 업데이트
-    document.getElementById('user-balance').textContent = `$${balance.toFixed(2)}`;
-    window.currentUser.balance = balance;
-    
-    // 게임 상태 초기화
-    setTimeout(resetGameState, 3000);
+    // 결과 표시 (애니메이션 후)
+    setTimeout(() => {
+        if (isWin) {
+            gameStatus.textContent = `승리! $${winAmount.toFixed(2)} 획득`;
+            gameStatus.className = 'win';
+        } else {
+            gameStatus.textContent = `패배! $${parseFloat(betAmount.value).toFixed(2)} 손실`;
+            gameStatus.className = 'lose';
+        }
+        
+        // 잔액 업데이트
+        document.getElementById('user-balance').textContent = `$${balance.toFixed(2)}`;
+        window.currentUser.balance = balance;
+        
+        // 게임 상태만 초기화 (카드는 유지)
+        isGameInProgress = false;
+        placeBetBtn.disabled = false;
+        betOptions.forEach(btn => btn.disabled = false);
+        betAmount.disabled = false;
+    }, (pCards.length + bCards.length) * 1500 + 500); // 모든 카드 애니메이션 후 0.5초 뒤
 }
 
-// 게임 상태 초기화
+// 카드 애니메이션으로 표시
+function showCardsWithAnimation(playerContainer, bankerContainer, playerCards, bankerCards, playerFinalScore, bankerFinalScore) {
+    const allCards = [];
+    
+    // 플레이어와 뱅커 카드를 번갈아가면서 보여줄 순서 설정
+    for (let i = 0; i < Math.max(playerCards.length, bankerCards.length); i++) {
+        if (i < playerCards.length) {
+            allCards.push({ 
+                container: playerContainer, 
+                card: playerCards[i], 
+                isPlayer: true,
+                index: i 
+            });
+        }
+        if (i < bankerCards.length) {
+            allCards.push({ 
+                container: bankerContainer, 
+                card: bankerCards[i], 
+                isPlayer: false,
+                index: i 
+            });
+        }
+    }
+    
+    // 점수 계산 함수
+    function calculateScore(cards, index) {
+        // 바카라 규칙에 따라 index까지의 카드로 점수 계산
+        let score = 0;
+        for (let i = 0; i <= index; i++) {
+            if (i >= cards.length) break;
+            
+            let value = cards[i].value;
+            // 바카라에서 J, Q, K, 10은 0점, A는 1점, 나머지는 숫자 그대로
+            if (value === 'J' || value === 'Q' || value === 'K' || value === '10') {
+                value = 0;
+            } else if (value === 'A') {
+                value = 1;
+            } else {
+                value = parseInt(value);
+            }
+            score += value;
+        }
+        // 바카라 규칙: 점수는 한 자리수만 사용 (10이면 0, 15면 5)
+        return score % 10;
+    }
+    
+    // 각 카드를 순차적으로 표시
+    allCards.forEach((cardInfo, index) => {
+        setTimeout(() => {
+            // 카드 추가
+            const cardElement = createCardElement(cardInfo.card);
+            cardInfo.container.appendChild(cardElement);
+            
+            // 카드 애니메이션 효과
+            setTimeout(() => {
+                cardElement.classList.add('show');
+            }, 50);
+            
+            // 카드가 추가될 때마다 현재까지의 점수 업데이트
+            if (cardInfo.isPlayer) {
+                const currentPlayerScore = calculateScore(playerCards, cardInfo.index);
+                playerScore.textContent = cardInfo.index === playerCards.length - 1 ? playerFinalScore : currentPlayerScore;
+            } else {
+                const currentBankerScore = calculateScore(bankerCards, cardInfo.index);
+                bankerScore.textContent = cardInfo.index === bankerCards.length - 1 ? bankerFinalScore : currentBankerScore;
+            }
+            
+        }, index * 1500); // 1.5초 간격으로 카드 표시
+    });
+}
+
+// 개선된 카드 요소 생성
+function createCardElement(card) {
+    const cardElement = document.createElement('div');
+    cardElement.className = `card ${card.suit}`;
+    cardElement.classList.add('card-animation');
+    
+    const innerElement = document.createElement('div');
+    innerElement.className = 'card-inner';
+    
+    const frontElement = document.createElement('div');
+    frontElement.className = 'card-front';
+    
+    // 왼쪽 상단 카드 값
+    const valueTopElement = document.createElement('div');
+    valueTopElement.className = 'card-value-top';
+    valueTopElement.textContent = getCardDisplayValue(card.value);
+    
+    // 왼쪽 상단 무늬
+    const suitTopElement = document.createElement('div');
+    suitTopElement.className = 'card-suit-top';
+    suitTopElement.innerHTML = getSuitSymbol(card.suit);
+    
+    // 중앙 대형 무늬
+    const centerElement = document.createElement('div');
+    centerElement.className = 'card-center-suit';
+    
+    // J, Q, K, A는 특별한, 기호가 아닌 문자로 중앙에 표시
+    if (card.value === 'J' || card.value === 'Q' || card.value === 'K' || card.value === 'A') {
+        centerElement.textContent = card.value;
+        centerElement.style.fontSize = '60px';
+        centerElement.style.fontWeight = 'bold';
+    } else {
+        centerElement.innerHTML = getSuitSymbol(card.suit);
+    }
+    
+    frontElement.appendChild(valueTopElement);
+    frontElement.appendChild(suitTopElement);
+    frontElement.appendChild(centerElement);
+    
+    const backElement = document.createElement('div');
+    backElement.className = 'card-back';
+    
+    innerElement.appendChild(frontElement);
+    innerElement.appendChild(backElement);
+    
+    cardElement.appendChild(innerElement);
+    return cardElement;
+}
+
+// 게임 상태 초기화 (카드는 유지)
 function resetGameState() {
     isGameInProgress = false;
     placeBetBtn.disabled = false;
     betOptions.forEach(btn => btn.disabled = false);
     betAmount.disabled = false;
-    clearCards();
     gameStatus.textContent = '베팅을 선택하세요';
     gameStatus.className = '';
+    // 카드는 clearCards()를 호출하지 않아 유지됨
 }
 
-// 카드 표시
-function displayCards(container, cards) {
-    container.innerHTML = '';
-    cards.forEach(card => {
-        const cardElement = document.createElement('div');
-        cardElement.className = `card ${card.suit}`;
-        
-        const valueElement = document.createElement('div');
-        valueElement.className = 'value';
-        valueElement.textContent = getCardDisplayValue(card.value);
-        
-        const suitElement = document.createElement('div');
-        suitElement.className = 'suit';
-        suitElement.innerHTML = getSuitSymbol(card.suit);
-        
-        cardElement.appendChild(valueElement);
-        cardElement.appendChild(suitElement);
-        container.appendChild(cardElement);
-    });
-}
-
-// 카드 초기화
+// 카드 초기화 (새 게임 시작할 때만 호출)
 function clearCards() {
     playerCards.innerHTML = '';
     bankerCards.innerHTML = '';
     playerScore.textContent = '0';
     bankerScore.textContent = '0';
+    
+    // 이전 게임의 효과 제거
+    const gameTable = document.querySelector('.game-table');
+    gameTable.classList.remove('win-effect', 'lose-effect');
 }
 
 // 카드 값 표시 변환
@@ -295,11 +405,57 @@ function setupSocketListeners(socket) {
             
             gameStatus.textContent = data.message;
             gameStatus.className = 'error';
+        } else {
+            // 새 게임 시작 시 카드 초기화
+            clearCards();
         }
     });
     
     // 게임 결과 처리
-    socket.on('game_result', displayGameResult);
+    socket.on('game_result', (data) => {
+        console.log('게임 결과 수신:', data);
+        
+        // 카드 애니메이션으로 표시
+        showCardsWithAnimation(playerCards, bankerCards, data.playerCards, data.bankerCards, data.playerScore, data.bankerScore);
+        
+        // 결과 표시 (애니메이션 후)
+        setTimeout(() => {
+            const gameTable = document.querySelector('.game-table');
+            
+            if (data.isWin) {
+                gameStatus.textContent = `승리! $${data.winAmount.toFixed(2)} 획득`;
+                gameStatus.className = 'game-status win';
+                
+                // 승리 화면 효과
+                gameTable.classList.add('win-effect');
+            } else {
+                gameStatus.textContent = `패배! $${data.bet.toFixed(2)} 손실`;
+                gameStatus.className = 'game-status lose';
+                
+                // 패배 화면 효과
+                gameTable.classList.add('lose-effect');
+            }
+            
+            // 잔액 업데이트
+            if (data.newBalance !== undefined) {
+                document.getElementById('user-balance').textContent = `$${data.newBalance.toFixed(2)}`;
+                if (window.currentUser) {
+                    window.currentUser.balance = data.newBalance;
+                }
+            }
+            
+            // 히스토리 항목 추가
+            if (data.historyItem) {
+                updateHistory(data.historyItem);
+            }
+            
+            // 게임 상태 초기화 (카드는 유지)
+            isGameInProgress = false;
+            placeBetBtn.disabled = false;
+            betOptions.forEach(btn => btn.disabled = false);
+            betAmount.disabled = false;
+        }, (data.playerCards.length + data.bankerCards.length) * 1500 + 500);
+    });
     
     // 채팅 메시지 처리
     socket.on('chat_message', addChatMessage);
@@ -338,7 +494,11 @@ export function initBaccarat(socket) {
     betAmount.addEventListener('input', updateBetUI);
     
     // 베팅 확정 이벤트
-    placeBetBtn.addEventListener('click', handlePlaceBet);
+    placeBetBtn.addEventListener('click', () => {
+        // 새 게임 시작 시 카드 초기화
+        clearCards();
+        handlePlaceBet();
+    });
     
     // 채팅 이벤트
     sendChatBtn.addEventListener('click', sendChatMessage);

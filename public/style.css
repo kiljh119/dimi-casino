@@ -477,25 +477,125 @@ body {
 
 .card {
   width: 100px;
-  height: 150px;
-  background-color: white;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 12px;
+  height: 140px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  margin: 0 5px;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+/* 카드 애니메이션 클래스 */
+.card-animation {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.5s ease-out;
+}
+
+.card-animation.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* 카드 내부 컨테이너 */
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+}
+
+/* 카드 앞면 */
+.card-front {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  backface-visibility: hidden;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 카드 뒷면 */
+.card-back {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  backface-visibility: hidden;
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, #6c63ff, #4361ee);
+  border-radius: 8px;
+  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-back::after {
+  content: '';
+  width: 60%;
+  height: 60%;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><path fill="rgba(255,255,255,0.15)" d="M0,0 L40,40 M20,0 L40,20 L20,40 L0,20 L20,0 M0,20 L20,0 M20,40 L40,20"/></svg>') repeat;
+  opacity: 0.7;
+  border-radius: 3px;
+}
+
+/* 카드 상단 왼쪽 값과 무늬 */
+.card-value-top {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.card-suit-top {
+  position: absolute;
+  top: 28px;
+  left: 5px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 중앙 대형 무늬 */
+.card-center-suit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 46px;
+  text-align: center;
+}
+
+/* 카드 색상 */
 .card.hearts, .card.diamonds {
   color: #e74c3c;
 }
 
+.card.hearts .card-suit-top, 
+.card.hearts .card-center-suit,
+.card.diamonds .card-suit-top, 
+.card.diamonds .card-center-suit {
+  color: #e74c3c;
+}
+
 .card.clubs, .card.spades {
-  color: #2c3e50;
+  color: #333;
+}
+
+.card.clubs .card-suit-top, 
+.card.clubs .card-center-suit,
+.card.spades .card-suit-top, 
+.card.spades .card-center-suit {
+  color: #333;
 }
 
 .card-value {
@@ -1556,4 +1656,47 @@ body {
 
 .admin-btn i {
     font-size: 14px;
+}
+
+/* 승리/패배 화면 효과 */
+.win-effect {
+  animation: winEffect 2s ease-in-out infinite;
+  box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
+  background-color: rgba(32, 201, 151, 0.05);
+}
+
+.lose-effect {
+  animation: loseEffect 2s ease-in-out infinite;
+  box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
+  background-color: rgba(255, 87, 87, 0.05);
+}
+
+@keyframes winEffect {
+  0% {
+    box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
+    background-color: rgba(32, 201, 151, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px 10px rgba(32, 201, 151, 0.5);
+    background-color: rgba(32, 201, 151, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 15px 5px rgba(32, 201, 151, 0.3);
+    background-color: rgba(32, 201, 151, 0.05);
+  }
+}
+
+@keyframes loseEffect {
+  0% {
+    box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
+    background-color: rgba(255, 87, 87, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px 10px rgba(255, 87, 87, 0.5);
+    background-color: rgba(255, 87, 87, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 15px 5px rgba(255, 87, 87, 0.3);
+    background-color: rgba(255, 87, 87, 0.05);
+  }
 }

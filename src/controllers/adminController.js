@@ -105,4 +105,46 @@ exports.subtractBalance = [isAdmin, async (req, res) => {
     console.error('Subtract balance error:', error);
     res.status(500).json({ success: false, message: '잔액 감소 중 오류가 발생했습니다.' });
   }
+}];
+
+// 계정 삭제
+exports.deleteUser = [isAdmin, async (req, res) => {
+  const { userId } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({ success: false, message: '사용자 ID를 입력해주세요.' });
+  }
+  
+  try {
+    // 삭제 전 사용자 정보 조회 (나중에 응답에 사용)
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    }
+    
+    const username = user.username;
+    
+    // 계정 삭제 진행
+    const result = await User.deleteUser(userId);
+    
+    if (result.success) {
+      res.status(200).json({ 
+        success: true, 
+        message: `${username} 계정이 성공적으로 삭제되었습니다.`,
+        deletedUsername: username
+      });
+    } else {
+      res.status(400).json({ 
+        success: false, 
+        message: '계정 삭제에 실패했습니다.'
+      });
+    }
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: `계정 삭제 중 오류가 발생했습니다: ${error.message}`
+    });
+  }
 }]; 

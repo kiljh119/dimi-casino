@@ -676,11 +676,24 @@ async function calculateResults(room, io) {
         
         // 데이터베이스 업데이트 (승리 시에만 금액 변경)
         try {
+            if (!player.username || player.username === 'admin') {
+                // 관리자나 유효하지 않은 사용자는 잔액 변경 안함
+                continue;
+            }
+            
+            // 사용자 ID 조회
+            const userId = player.userId || await User.findByUsername(player.username).then(user => user?.id);
+            
+            if (!userId) {
+                console.error('사용자 ID를 찾을 수 없음:', player.username);
+                continue;
+            }
+            
             if (result === 'win' || result === 'blackjack') {
-                await User.updateBalance(player.userId, winAmount - player.bet, true);
+                await User.updateBalance(userId, winAmount - player.bet, true);
                 player.balance += (winAmount - player.bet);
             } else if (result === 'lose') {
-                await User.updateBalance(player.userId, player.bet, false);
+                await User.updateBalance(userId, player.bet, false);
                 player.balance -= player.bet;
             }
         } catch (error) {

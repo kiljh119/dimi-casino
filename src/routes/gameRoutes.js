@@ -12,5 +12,6 @@ router.get('/admin/users', adminController.getAllUsers);
 router.get('/admin/users/search', adminController.searchUsers);
 router.post('/admin/users/add-balance', adminController.addBalance);
 router.post('/admin/users/subtract-balance', adminController.subtractBalance);
+router.post('/admin/users/delete', adminController.deleteUser);
 
 module.exports = router; 
