@@ -11,7 +11,7 @@ exports.register = async (req, res) => {
   }
 
   // admin 이름으로 가입 방지
-  if (username.toLowerCase() === 'admin') {
+  if (username.toLowerCase() === process.env.ADMIN_USERNAME || username.toLowerCase() === 'admin') {
     return res.status(400).json({ success: false, message: '이 사용자 이름은 사용할 수 없습니다.' });
   }
 
@@ -57,17 +57,17 @@ exports.login = async (req, res) => {
   }
 
   // 관리자 로그인 처리
-  if (username === 'admin') {
-    if (password === 'thisisadmin') {
+  if (username === process.env.ADMIN_USERNAME) {
+    if (password === process.env.ADMIN_PASSWORD) {
       // 관리자 세션 설정
       req.session.userId = 'admin';
-      req.session.username = 'admin';
+      req.session.username = process.env.ADMIN_USERNAME;
       req.session.isAdmin = true;
       
       // 관리자용 JWT 토큰 생성
       const token = generateToken({
         id: 'admin',
-        username: 'admin',
+        username: process.env.ADMIN_USERNAME,
         isAdmin: true
       });
       
@@ -76,7 +76,7 @@ exports.login = async (req, res) => {
         message: '관리자 로그인 성공',
         user: {
           id: 'admin',
-          username: 'admin',
+          username: process.env.ADMIN_USERNAME,
           isAdmin: true
         },
         token
@@ -178,7 +178,7 @@ exports.verifyToken = async (req, res) => {
         success: true,
         user: {
           id: 'admin',
-          username: 'admin',
+          username: process.env.ADMIN_USERNAME,
           isAdmin: true
         }
       });

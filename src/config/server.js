@@ -17,15 +17,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // 세션 설정
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.sqlite' }),
-  secret: 'baccarat-game-secret',
+  store: new SQLiteStore({ db: process.env.SESSION_DB_PATH || 'sessions.sqlite' }),
+  secret: process.env.SESSION_SECRET || 'baccarat-game-secret',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30일
 }));
 
 const SERVER_CONFIG = {
-    port: process.env.PORT || 3002,
+    port: process.env.PORT || 3000,
     /* ... 다른 설정들 ... */
 };
 

@@ -48,7 +48,7 @@
                         <p id="register-success" class="success-message"></p>
                         
                         <div class="auth-links">
-                            <p>이미 계정이 있으신가요? <a href="login.html" id="login-link">로그인하기</a></p>
+                            <p>이미 계정이 있으신가요? <a href="login.html">로그인하기</a></p>
                         </div>
                     </div>
                     
@@ -61,86 +61,6 @@
     </div>
     
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        // 회원가입 관련 스크립트
-        document.addEventListener('DOMContentLoaded', function() {
-            // 회원가입 버튼 이벤트
-            const registerBtn = document.getElementById('register-btn');
-            const registerUsername = document.getElementById('register-username');
-            const registerPassword = document.getElementById('register-password');
-            const registerConfirmPassword = document.getElementById('register-confirm-password');
-            const registerError = document.getElementById('register-error');
-            const registerSuccess = document.getElementById('register-success');
-            
-            // 이미 로그인된 경우 메인 메뉴로 리디렉션
-            if (localStorage.getItem('user')) {
-                window.location.href = '/';
-                return;
-            }
-            
-            // 회원가입 시도
-            registerBtn.addEventListener('click', function() {
-                const username = registerUsername.value.trim();
-                const password = registerPassword.value.trim();
-                const confirmPassword = registerConfirmPassword.value.trim();
-                
-                // 입력값 검증
-                if (!username || !password || !confirmPassword) {
-                    registerError.textContent = '모든 필드를 입력해주세요.';
-                    registerSuccess.textContent = '';
-                    return;
-                }
-                
-                if (password !== confirmPassword) {
-                    registerError.textContent = '비밀번호가 일치하지 않습니다.';
-                    registerSuccess.textContent = '';
-                    return;
-                }
-                
-                // 회원가입 요청
-                fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 회원가입 성공
-                        registerError.textContent = '';
-                        registerSuccess.textContent = '회원가입에 성공했습니다. 로그인 페이지로 이동합니다.';
-                        
-                        // 입력 필드 초기화
-                        registerUsername.value = '';
-                        registerPassword.value = '';
-                        registerConfirmPassword.value = '';
-                        
-                        // 로그인 페이지로 이동
-                        setTimeout(() => {
-                            window.location.href = 'login.html';
-                        }, 2000);
-                    } else {
-                        // 회원가입 실패
-                        registerError.textContent = data.message || '회원가입에 실패했습니다.';
-                        registerSuccess.textContent = '';
-                    }
-                })
-                .catch(error => {
-                    console.error('회원가입 요청 오류:', error);
-                    registerError.textContent = '서버 오류가 발생했습니다. 나중에 다시 시도해주세요.';
-                    registerSuccess.textContent = '';
-                });
-            });
-            
-            // 엔터 키로 회원가입
-            registerConfirmPassword.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    registerBtn.click();
-                }
-            });
-        });
-    </script>
+    <script type="module" src="register.js"></script>
 </body>
 </html> 

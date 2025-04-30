@@ -1,3 +1,6 @@
+// .env 파일을 로드하여 환경 변수 설정
+require('dotenv').config();
+
 // 모듈화된 애플리케이션으로 리디렉션
 require('./src/app');
 

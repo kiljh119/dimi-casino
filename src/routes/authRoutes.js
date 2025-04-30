@@ -9,3 +9,5 @@ router.post('/logout', authController.logout);
 router.post('/verify-token', authController.verifyToken);
 
 module.exports = router; 
+
+// 밥.net:3000/api/register POST
