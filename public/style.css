@@ -1319,13 +1319,6 @@ body {
   background-position: center;
 }
 
-#blackjack-card .game-card-image {
-  background-color: #2c3e50;
-  background-image: url('assets/blackjack.jpg');
-  background-size: cover;
-  background-position: center;
-}
-
 #roulette-card .game-card-image {
   background-color: #e74c3c;
   background-image: url('assets/roulette.jpg');

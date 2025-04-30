@@ -24,7 +24,7 @@ export function initMenu(socket) {
             
             // 게임 종류에 따라 처리
             const game = this.dataset.game;
-            if (game === 'baccarat' || game === 'blackjack') {
+            if (game === 'baccarat' || game === 'ranking') {
                 // 사용자 정보 로컬 스토리지에 저장
                 if (window.currentUser) {
                     console.log('게임 이동 전 사용자 정보 저장:', window.currentUser);
@@ -50,8 +50,8 @@ export function initMenu(socket) {
             
             if (gameId === 'baccarat-card') {
                 gameName = 'baccarat';
-            } else if (gameId === 'blackjack-card') {
-                gameName = 'blackjack';
+            } else if (gameId === 'ranking-card') {
+                gameName = 'ranking';
             }
             
             if (gameName) {

@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const GameHistory = require('../models/GameHistory');
 const { calculateGameResult } = require('../utils/gameUtils');
-const { setupBlackjackSocket } = require('./blackjackHandler');
 
 // 사용자, 게임 데이터 저장
 const onlinePlayers = {};
@@ -9,9 +8,6 @@ const games = {};
 
 // 게임 소켓 핸들러
 function setupGameSocket(io) {
-  // 블랙잭 소켓 설정
-  setupBlackjackSocket(io);
-  
   console.log('게임 소켓 핸들러 설정 완료');
   
   // 모든 소켓 연결에 대한 이벤트 처리

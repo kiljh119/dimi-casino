@@ -8,110 +8,127 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        .ranking-container {
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        
+        .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
         
-        .ranking-header {
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         
-        .ranking-tab {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ccc;
+        h1 {
+            color: #4361ee;
+            margin: 0;
         }
         
-        .ranking-tab button {
-            padding: 10px 20px;
-            background: none;
+        .back-btn {
+            padding: 8px 16px;
+            background-color: #4361ee;
+            color: white;
             border: none;
-            border-bottom: 3px solid transparent;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .ranking-tab button.active {
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
         }
         
-        .tab-content {
-            display: none;
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
         }
         
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s;
+        .tab.active {
+            border-bottom-color: #4361ee;
+            color: #4361ee;
+            font-weight: bold;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
         }
         
-        table th, table td {
+        th, td {
             padding: 12px 15px;
             text-align: left;
-            border-bottom: 1px solid #f0f2f5;
+            border-bottom: 1px solid #eee;
         }
         
-        table th {
+        thead {
             background-color: #f9fafc;
+        }
+        
+        th {
             font-weight: 600;
-            color: var(--text-color);
         }
         
-        table tr:hover {
-            background-color: rgba(67, 97, 238, 0.03);
-        }
-        
-        .current-user {
+        .highlight {
             background-color: rgba(67, 97, 238, 0.05);
             font-weight: 600;
         }
         
         .positive {
-            color: var(--success-color);
+            color: #38b000;
         }
         
         .negative {
-            color: var(--error-color);
+            color: #e63946;
         }
         
         .history-list {
-            list-style: none;
+            list-style-type: none;
             padding: 0;
         }
         
         .history-item {
             padding: 15px;
             margin-bottom: 10px;
-            border-radius: var(--radius-md);
-            background-color: white;
-            box-shadow: var(--shadow-sm);
+            border-radius: 8px;
+            background-color: #f9fafc;
             border-left: 3px solid #ddd;
+        }
+        
+        .history-item.win {
+            border-left-color: #38b000;
+        }
+        
+        .history-item.lose {
+            border-left-color: #e63946;
         }
         
         .history-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            color: #666;
             font-size: 0.9em;
-            color: var(--text-muted);
         }
         
         .history-body {
@@ -121,478 +138,359 @@
             gap: 10px;
         }
         
-        .history-result {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .player-win {
-            background-color: var(--player-color);
-        }
-        
-        .banker-win {
-            background-color: var(--banker-color);
-        }
-        
-        .tie {
-            background-color: var(--tie-color);
-        }
-        
-        .history-win {
-            border-left-color: var(--success-color);
-        }
-        
-        .history-lose {
-            border-left-color: var(--error-color);
-        }
-        
-        .back-btn {
-            padding: 10px 15px;
-            border: none;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: var(--radius-md);
-            cursor: pointer;
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            font-weight: 500;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
         }
         
-        .back-btn:hover {
-            background-color: var(--primary-dark);
+        .badge.player {
+            background-color: #4361ee;
         }
         
-        .no-records {
+        .badge.banker {
+            background-color: #ff5a5f;
+        }
+        
+        .badge.tie {
+            background-color: #ffbe0b;
+        }
+        
+        .win-amount {
+            margin-left: auto;
+            font-weight: 600;
+        }
+        
+        .win-amount.positive {
+            color: #38b000;
+        }
+        
+        .win-amount.negative {
+            color: #e63946;
+        }
+        
+        .no-data {
             text-align: center;
-            padding: 20px;
-            color: var(--text-muted);
-            background-color: rgba(67, 97, 238, 0.03);
-            border-radius: var(--radius-md);
-            border: 1px dashed rgba(67, 97, 238, 0.2);
-            margin: 20px 0;
+            padding: 30px;
+            color: #999;
+        }
+        
+        .refresh-info {
+            text-align: right;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="ranking-container">
-            <div class="ranking-header">
-                <h1>랭킹 및 게임 기록</h1>
-                <button id="back-btn" class="back-btn" onclick="window.location.href='baccarat.html'">
-                    <i class="fas fa-arrow-left"></i> 게임으로 돌아가기
-                </button>
-            </div>
-            
-            <div class="ranking-tab">
-                <button id="tab-rankings" class="active">랭킹</button>
-                <button id="tab-history">내 게임 기록</button>
-            </div>
-            
-            <div id="rankings-content" class="tab-content active">
-                <table id="rankings-table">
-                    <thead>
-                        <tr>
-                            <th>순위</th>
-                            <th>이름</th>
-                            <th>보유 금액</th>
-                            <th>승률</th>
-                            <th>총 게임</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rankings-list">
-                        <!-- 랭킹 데이터가 여기에 동적으로 추가됩니다 -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <div id="history-content" class="tab-content">
-                <ul id="history-list" class="history-list">
-                    <!-- 게임 기록이 여기에 동적으로 추가됩니다 -->
-                </ul>
-            </div>
+        <div class="header">
+            <h1>랭킹 및 게임 기록</h1>
+            <button class="back-btn" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i> 메인 메뉴로 돌아가기
+            </button>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" id="rankings-tab">랭킹</div>
+            <div class="tab" id="history-tab">내 게임 기록</div>
+        </div>
+        
+        <div class="content" id="rankings-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>순위</th>
+                        <th>이름</th>
+                        <th>보유 금액</th>
+                        <th>승률</th>
+                        <th>총 게임</th>
+                    </tr>
+                </thead>
+                <tbody id="rankings-list">
+                    <tr>
+                        <td colspan="5" class="no-data">랭킹 데이터를 불러오는 중...</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="refresh-info" id="refresh-timer">다음 새로고침까지: 60초</div>
+        </div>
+        
+        <div class="content" id="history-content" style="display: none;">
+            <ul class="history-list" id="history-list">
+                <li class="no-data">게임 기록을 불러오는 중...</li>
+            </ul>
         </div>
     </div>
     
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // 전역 변수
-        let currentUser = null;
-        const rankingsList = document.getElementById('rankings-list');
-        const historyList = document.getElementById('history-list');
-        const tabRankings = document.getElementById('tab-rankings');
-        const tabHistory = document.getElementById('tab-history');
+        // DOM 요소
+        const rankingsTab = document.getElementById('rankings-tab');
+        const historyTab = document.getElementById('history-tab');
         const rankingsContent = document.getElementById('rankings-content');
         const historyContent = document.getElementById('history-content');
+        const rankingsList = document.getElementById('rankings-list');
+        const historyList = document.getElementById('history-list');
+        const refreshTimer = document.getElementById('refresh-timer');
         
-        // 로컬 스토리지 키
-        const GAME_HISTORY_STORAGE_KEY = 'baccarat_game_history';
-        
-        // 페이지 로드 시 실행
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('랭킹 페이지 로드됨');
-            
-            // 사용자 정보 가져오기
-            try {
-                const userStr = localStorage.getItem('user');
-                if (userStr) {
-                    currentUser = JSON.parse(userStr);
-                    console.log('로그인된 사용자:', currentUser);
-                } else {
-                    console.log('로그인 정보가 없습니다');
-                    alert('로그인이 필요합니다.');
-                    window.location.href = '/';
-                    return;
-                }
-            } catch (err) {
-                console.error('사용자 정보 파싱 오류:', err);
-                alert('로그인 정보가 유효하지 않습니다.');
+        // 로컬 스토리지에서 사용자 정보 가져오기
+        let currentUser = null;
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                currentUser = JSON.parse(userStr);
+                console.log('로그인된 사용자:', currentUser);
+            } else {
+                alert('로그인이 필요합니다.');
                 window.location.href = '/';
-                return;
             }
-            
-            // 탭 이벤트 처리
-            tabRankings.addEventListener('click', function() {
-                tabRankings.classList.add('active');
-                tabHistory.classList.remove('active');
-                rankingsContent.classList.add('active');
-                historyContent.classList.remove('active');
-            });
-            
-            tabHistory.addEventListener('click', function() {
-                tabHistory.classList.add('active');
-                tabRankings.classList.remove('active');
-                historyContent.classList.add('active');
-                rankingsContent.classList.remove('active');
-                
-                // 탭 전환 시 기록 다시 로드
-                loadGameHistory();
-            });
-            
-            // 소켓 연결
-            const socket = io();
-            
-            // 디버깅을 위한 소켓 이벤트 리스너 추가
-            socket.on('connect_error', function(error) {
-                console.error('소켓 연결 오류:', error);
-            });
-            
-            socket.on('error', function(error) {
-                console.error('소켓 에러:', error);
-            });
-            
-            socket.on('disconnect', function(reason) {
-                console.log('소켓 연결 종료:', reason);
-            });
-            
-            // 서버에 데이터 요청
-            socket.on('connect', function() {
-                console.log('서버에 연결되었습니다. 소켓 ID:', socket.id);
-                
-                // 사용자 로그인
-                socket.emit('login', {
-                    username: currentUser.username
-                });
-                
-                // 랭킹 데이터 요청
-                console.log('게임 데이터 요청 중...');
-                socket.emit('request_game_data');
-                
-                // 내 게임 기록 바로 표시
-                loadGameHistory();
-            });
-            
-            // 로그인 응답 처리
-            socket.on('login_response', function(response) {
-                console.log('로그인 응답:', response);
-                
-                if (response.success) {
-                    // 사용자 정보 업데이트
-                    currentUser = response.user;
-                    localStorage.setItem('user', JSON.stringify(currentUser));
-                    
-                    // 데이터 요청
-                    console.log('로그인 성공 후 게임 데이터 다시 요청');
-                    socket.emit('request_game_data');
-                } else {
-                    console.error('로그인 실패:', response.message);
-                    alert('로그인에 실패했습니다: ' + response.message);
-                    window.location.href = '/';
-                }
-            });
-            
-            // 게임 데이터 수신
-            socket.on('game_data', function(data) {
-                console.log('게임 데이터 수신:', data);
-                
-                // 랭킹 업데이트
-                if (data.rankings && Array.isArray(data.rankings)) {
-                    console.log('랭킹 데이터 처리:', data.rankings.length + '개');
-                    updateRankings(data.rankings);
-                } else {
-                    console.warn('올바른 랭킹 데이터가 없습니다:', data.rankings);
-                    rankingsList.innerHTML = '<tr><td colspan="5" style="text-align: center;">랭킹 정보가 없습니다.</td></tr>';
-                }
-                
-                // 게임 기록 업데이트
-                if (data.history && Array.isArray(data.history) && data.history.length > 0) {
-                    console.log('서버에서 받은 게임 기록 처리:', data.history.length + '개');
-                    updateGameHistory(data.history);
-                } else {
-                    console.log('서버에서 받은 기록이 없습니다. 로컬 저장소에서 로드합니다.');
-                    loadGameHistory(); 
-                }
-            });
-            
-            // 랭킹 업데이트
-            socket.on('rankings_update', function(rankings) {
-                console.log('랭킹 업데이트 수신:', rankings);
-                if (rankings && Array.isArray(rankings)) {
-                    updateRankings(rankings);
-                }
-            });
-            
-            // 게임 완료 이벤트
-            socket.on('game_completed', function(gameData) {
-                console.log('게임 완료 이벤트:', gameData);
-                loadGameHistory();
-            });
-            
-            // 수동으로 데이터 요청 (로드 시 자동 요청 외에 추가 보험)
-            setTimeout(() => {
-                console.log('5초 후 서버에 데이터 다시 요청');
-                socket.emit('request_game_data');
-            }, 5000);
+        } catch (err) {
+            console.error('사용자 정보 파싱 오류:', err);
+            alert('로그인 정보가 유효하지 않습니다.');
+            window.location.href = '/';
+        }
+        
+        // 탭 전환
+        rankingsTab.addEventListener('click', () => {
+            rankingsTab.classList.add('active');
+            historyTab.classList.remove('active');
+            rankingsContent.style.display = 'block';
+            historyContent.style.display = 'none';
         });
         
-        // 랭킹 업데이트 함수
-        function updateRankings(rankings) {
-            if (!rankingsList) {
-                console.error('랭킹 목록 요소가 없습니다');
-                return;
+        historyTab.addEventListener('click', () => {
+            historyTab.classList.add('active');
+            rankingsTab.classList.remove('active');
+            historyContent.style.display = 'block';
+            rankingsContent.style.display = 'none';
+            loadHistory();
+        });
+        
+        // 소켓 연결
+        const socket = io();
+        
+        socket.on('connect', () => {
+            console.log('서버에 연결됨, 소켓 ID:', socket.id);
+            
+            // 사용자 로그인
+            socket.emit('login', {
+                username: currentUser.username
+            });
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('소켓 연결 오류:', error);
+        });
+        
+        // 로그인 응답
+        socket.on('login_response', (response) => {
+            console.log('로그인 응답:', response);
+            
+            if (response.success) {
+                // 사용자 정보 업데이트
+                currentUser = response.user;
+                
+                // 게임 데이터 요청
+                console.log('게임 데이터 요청 중...');
+                socket.emit('request_game_data');
+            } else {
+                alert('로그인 실패: ' + response.message);
+                window.location.href = '/';
+            }
+        });
+        
+        // 게임 데이터 수신
+        socket.on('game_data', (data) => {
+            console.log('게임 데이터 수신:', data);
+            
+            if (data.rankings) {
+                displayRankings(data.rankings);
             }
             
-            console.log('랭킹 업데이트 시작');
-            
-            // 랭킹 목록 초기화
-            rankingsList.innerHTML = '';
+            if (data.history) {
+                displayHistory(data.history);
+            }
+        });
+        
+        // 랭킹 업데이트
+        socket.on('rankings_update', (rankings) => {
+            console.log('랭킹 업데이트 수신:', rankings);
+            displayRankings(rankings);
+        });
+        
+        // 랭킹 표시
+        function displayRankings(rankings) {
+            console.log('랭킹 표시 시작:', rankings);
             
             if (!rankings || !rankings.length) {
-                console.warn('랭킹 데이터가 비어있습니다');
-                rankingsList.innerHTML = '<tr><td colspan="5" style="text-align: center;">랭킹 정보가 없습니다.</td></tr>';
+                rankingsList.innerHTML = '<tr><td colspan="5" class="no-data">랭킹 정보가 없습니다.</td></tr>';
                 return;
             }
             
-            console.log('랭킹 데이터:', rankings);
+            // 잔액 기준으로 정렬
+            const sortedRankings = [...rankings].sort((a, b) => b.balance - a.balance);
             
-            // 잔액 기준으로 정렬 (내림차순)
-            const sortedRankings = [...rankings].sort((a, b) => {
-                return b.balance - a.balance;
-            });
+            rankingsList.innerHTML = '';
             
-            console.log('정렬된 랭킹:', sortedRankings);
-            
-            // 랭킹 표시
             sortedRankings.forEach((player, index) => {
+                // 필요한 데이터 준비
+                const rank = index + 1;
+                const username = player.username || '알 수 없음';
+                const balance = player.balance || 0;
+                const wins = player.wins || 0;
+                const losses = player.losses || 0;
+                const totalGames = player.totalGames || (wins + losses) || 0;
+                
+                // 승률 계산
+                const winRate = totalGames > 0 ? (wins / totalGames * 100).toFixed(1) : '0.0';
+                
+                // 현재 사용자 하이라이트
+                const isCurrentUser = currentUser && username === currentUser.username;
+                
+                // 상위 3위 스타일
+                const rankColors = ['#ffb703', '#bcb8b1', '#8a5a44'];
+                const rankStyle = index < 3 ? `color: ${rankColors[index]}; font-weight: bold;` : '';
+                
+                // 잔액 클래스
+                const balanceClass = balance > 1000 ? 'positive' : (balance < 1000 ? 'negative' : '');
+                
                 const row = document.createElement('tr');
-                
-                // 현재 사용자인 경우 강조
-                if (currentUser && player.username === currentUser.username) {
-                    row.classList.add('current-user');
-                }
-                
-                // 보유 금액 클래스 - 잔액이 시작 금액보다 많으면 긍정적, 적으면 부정적
-                const balanceClass = player.balance > 1000 ? 'positive' : (player.balance < 1000 ? 'negative' : '');
-                
-                // 승률 계산 수정 - 게임 수가 0인 경우 대비
-                let winRate = 0;
-                if (player.totalGames && player.totalGames > 0) {
-                    winRate = player.wins / player.totalGames;
-                } else if (player.wins > 0 && player.losses >= 0) {
-                    // 서버에서 totalGames가 제공되지 않았을 때 wins와 losses로 계산
-                    const totalGames = player.wins + player.losses;
-                    winRate = totalGames > 0 ? player.wins / totalGames : 0;
-                }
-                
-                // 게임 횟수 계산
-                const totalGames = player.totalGames || (player.wins + player.losses || 0);
-                
-                // 상위 3위는 특별 스타일
-                const rankStyle = index < 3 ? `style="font-weight: bold; color: ${index === 0 ? '#f1c40f' : (index === 1 ? '#bdc3c7' : '#cd7f32')};"` : '';
-                
-                const usernameText = player.username || '알 수 없음';
-                const balanceValue = player.balance ? player.balance.toFixed(2) : '0.00';
+                if (isCurrentUser) row.classList.add('highlight');
                 
                 row.innerHTML = `
-                    <td ${rankStyle}>${index + 1}</td>
-                    <td>${usernameText}</td>
-                    <td class="${balanceClass}">$${balanceValue}</td>
-                    <td>${(winRate * 100).toFixed(1)}%</td>
+                    <td style="${rankStyle}">${rank}</td>
+                    <td>${username}</td>
+                    <td class="${balanceClass}">$${balance.toFixed(2)}</td>
+                    <td>${winRate}%</td>
                     <td>${totalGames}</td>
                 `;
                 
                 rankingsList.appendChild(row);
             });
-            
-            console.log('랭킹 업데이트 완료');
         }
         
-        // 게임 기록 업데이트 함수
-        function updateGameHistory(history) {
-            console.log('게임 기록 업데이트 시작');
+        // 게임 기록 표시
+        function displayHistory(history) {
+            console.log('게임 기록 표시 시작:', history);
             
-            if (!historyList) {
-                console.error('기록 목록 요소가 없습니다');
+            if (!history || !history.length) {
+                historyList.innerHTML = '<li class="no-data">게임 기록이 없습니다.</li>';
                 return;
             }
             
-            // 서버에서 받은 기록이 있으면 업데이트
-            if (history && history.length) {
-                // 기록 초기화
-                historyList.innerHTML = '';
-                
-                // 최신 기록부터 표시
-                const sortedHistory = [...history].sort((a, b) => {
-                    const timeA = a.time ? new Date(a.time).getTime() : 0;
-                    const timeB = b.time ? new Date(b.time).getTime() : 0;
-                    return timeB - timeA; // 내림차순 정렬
-                });
-                
-                console.log('정렬된 게임 기록:', sortedHistory);
-                
-                let hasUserHistory = false;
-                sortedHistory.forEach(item => {
-                    // 현재 사용자의 기록만 표시
-                    if (currentUser && (item.player === currentUser.username || item.username === currentUser.username)) {
-                        addHistoryItem(item);
-                        hasUserHistory = true;
-                    }
-                });
-                
-                if (!hasUserHistory) {
-                    console.log('사용자의 게임 기록이 없습니다');
-                    historyList.innerHTML = '<p class="no-records">게임 기록이 없습니다.</p>';
-                }
-            } else {
-                console.log('서버에서 받은 게임 기록이 없습니다');
-                historyList.innerHTML = '<p class="no-records">게임 기록이 없습니다.</p>';
-            }
+            // 시간순 정렬 (최신순)
+            const sortedHistory = [...history].sort((a, b) => {
+                const timeA = a.time ? new Date(a.time).getTime() : 0;
+                const timeB = b.time ? new Date(b.time).getTime() : 0;
+                return timeB - timeA;
+            });
             
-            console.log('게임 기록 업데이트 완료');
+            historyList.innerHTML = '';
+            
+            let userHistory = false;
+            
+            sortedHistory.forEach(item => {
+                if (currentUser && (item.player === currentUser.username || item.username === currentUser.username)) {
+                    userHistory = true;
+                    
+                    const li = document.createElement('li');
+                    li.className = `history-item ${item.isWin ? 'win' : 'lose'}`;
+                    
+                    // 시간 포맷팅
+                    const date = new Date(item.time);
+                    const timeStr = date.toLocaleString();
+                    
+                    // 게임 결과
+                    let badgeClass = '';
+                    let badgeText = '';
+                    
+                    if (item.winner === 'player' || (item.choice === 'player' && item.isWin)) {
+                        badgeClass = 'player';
+                        badgeText = 'P';
+                    } else if (item.winner === 'banker' || (item.choice === 'banker' && item.isWin)) {
+                        badgeClass = 'banker';
+                        badgeText = 'B';
+                    } else if (item.winner === 'tie' || (item.choice === 'tie' && item.isWin)) {
+                        badgeClass = 'tie';
+                        badgeText = 'T';
+                    }
+                    
+                    // 베팅 옵션
+                    const betOption = item.choice === 'player' ? '플레이어' : 
+                                    (item.choice === 'banker' ? '뱅커' : 
+                                    (item.choice === 'tie' ? '타이' : '알 수 없음'));
+                    
+                    // 베팅 금액
+                    const betAmount = item.bet || item.amount || 0;
+                    
+                    // 이긴/진 금액
+                    const amountClass = item.isWin ? 'positive' : 'negative';
+                    const amountText = item.isWin ? 
+                            `+$${(item.winAmount || betAmount).toFixed(2)}` : 
+                            `-$${betAmount.toFixed(2)}`;
+                    
+                    li.innerHTML = `
+                        <div class="history-header">
+                            <span>게임 #${item.gameId ? String(item.gameId).slice(-4) : '0000'}</span>
+                            <span>${timeStr}</span>
+                        </div>
+                        <div class="history-body">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <span>베팅: ${betOption} $${betAmount.toFixed(2)}</span>
+                            <span>점수: ${item.playerScore || 0}:${item.bankerScore || 0}</span>
+                            <span class="win-amount ${amountClass}">${amountText}</span>
+                        </div>
+                    `;
+                    
+                    historyList.appendChild(li);
+                }
+            });
+            
+            if (!userHistory) {
+                historyList.innerHTML = '<li class="no-data">게임 기록이 없습니다.</li>';
+            }
         }
         
-        // 로컬 스토리지에서 게임 기록 불러오기
-        function loadGameHistory() {
-            console.log('로컬 스토리지에서 게임 기록 로드 시작');
-            
+        // 로컬 스토리지에서 기록 로드 (백업)
+        function loadHistory() {
             try {
-                const savedHistory = localStorage.getItem(GAME_HISTORY_STORAGE_KEY);
-                
-                if (savedHistory) {
-                    const gameHistory = JSON.parse(savedHistory);
-                    console.log('로컬 스토리지에서 게임 기록 로드:', gameHistory.length + '개');
-                    
-                    // 기록 초기화
-                    historyList.innerHTML = '';
-                    
-                    // 최신 기록부터 표시 (현재 사용자의 기록만)
-                    const sortedHistory = [...gameHistory].sort((a, b) => {
-                        const timeA = a.time ? new Date(a.time).getTime() : 0;
-                        const timeB = b.time ? new Date(b.time).getTime() : 0;
-                        return timeB - timeA; // 내림차순 정렬
-                    });
-                    
-                    let hasUserHistory = false;
-                    sortedHistory.forEach(item => {
-                        if (currentUser && (item.player === currentUser.username || item.username === currentUser.username)) {
-                            addHistoryItem(item);
-                            hasUserHistory = true;
-                        }
-                    });
-                    
-                    if (hasUserHistory) {
-                        console.log('현재 사용자의 기록이 표시됩니다.');
-                    } else {
-                        console.log('현재 사용자의 기록이 없습니다.');
-                        historyList.innerHTML = '<p class="no-records">게임 기록이 없습니다.</p>';
-                    }
-                } else {
-                    console.log('저장된 게임 기록이 없습니다.');
-                    historyList.innerHTML = '<p class="no-records">게임 기록이 없습니다.</p>';
+                const storedHistory = localStorage.getItem('baccarat_game_history');
+                if (storedHistory) {
+                    const history = JSON.parse(storedHistory);
+                    displayHistory(history);
                 }
-            } catch (error) {
-                console.error('게임 기록을 불러오는 중 오류 발생:', error);
-                historyList.innerHTML = '<p class="no-records">게임 기록을 불러오는 중 오류가 발생했습니다.</p>';
+            } catch (err) {
+                console.error('게임 기록 로드 오류:', err);
             }
-            
-            console.log('로컬 스토리지에서 게임 기록 로드 완료');
         }
         
-        // 기록 항목 추가
-        function addHistoryItem(item) {
-            console.log('게임 기록 항목 추가:', item);
+        // 1분(60초)마다 데이터 갱신
+        let refreshCountdown = 60;
+        
+        function updateRefreshTimer() {
+            refreshTimer.textContent = `다음 새로고침까지: ${refreshCountdown}초`;
+            refreshCountdown--;
             
-            // 항목이 유효한지 확인
-            if (!item || (!item.choice && !item.bet && !item.gameId)) {
-                console.log('유효하지 않은 게임 기록 항목 무시:', item);
-                return;
+            if (refreshCountdown < 0) {
+                refreshCountdown = 60;
+                console.log('1분마다 데이터 갱신...');
+                socket.emit('request_game_data');
             }
-            
-            const li = document.createElement('li');
-            li.className = `history-item ${item.isWin ? 'history-win' : 'history-lose'}`;
-            
-            // 게임 결과 클래스
-            let resultClass = '';
-            let resultLabel = '';
-            
-            if (item.winner === 'player' || (item.choice === 'player' && item.isWin)) {
-                resultClass = 'player-win';
-                resultLabel = 'P';
-            } else if (item.winner === 'banker' || (item.choice === 'banker' && item.isWin)) {
-                resultClass = 'banker-win';
-                resultLabel = 'B';
-            } else if (item.winner === 'tie' || (item.choice === 'tie' && item.isWin)) {
-                resultClass = 'tie';
-                resultLabel = 'T';
-            }
-            
-            // 베팅 금액이 없는 경우 기본값 설정
-            const betAmount = item.bet || item.amount || 0;
-            
-            // 시간 포맷팅
-            const gameTime = item.time ? new Date(item.time).toLocaleString() : '알 수 없음';
-            
-            // 베팅 옵션 텍스트
-            const betOption = item.choice === 'player' ? '플레이어' : 
-                             (item.choice === 'banker' ? '뱅커' : 
-                             (item.choice === 'tie' ? '타이' : '알 수 없음'));
-            
-            // 이긴 금액 계산
-            const winAmount = item.winAmount || (item.isWin ? betAmount : 0);
-            
-            li.innerHTML = `
-                <div class="history-header">
-                    <span>게임 #${item.gameId ? item.gameId.toString().slice(-4) : '0000'}</span>
-                    <span>${gameTime}</span>
-                </div>
-                <div class="history-body">
-                    <span class="history-result ${resultClass}">${resultLabel}</span>
-                    <span>베팅: ${betOption} $${betAmount}</span>
-                    <span>점수: ${item.playerScore || 0}:${item.bankerScore || 0}</span>
-                    <span style="margin-left: auto; font-weight: bold; color: ${item.isWin ? 'var(--success-color)' : 'var(--error-color)'}">
-                        ${item.isWin ? '+$' + winAmount.toFixed(2) : '-$' + betAmount.toFixed(2)}
-                    </span>
-                </div>
-            `;
-            
-            historyList.appendChild(li);
         }
+        
+        // 1초마다 타이머 업데이트
+        setInterval(updateRefreshTimer, 1000);
+        
+        // 초기 데이터 로드
+        socket.emit('request_game_data');
     </script>
 </body>
 </html> 
