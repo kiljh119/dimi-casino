@@ -24,13 +24,66 @@
         
         .game-info-panel {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
+            align-items: center;
             background-color: rgba(0, 0, 0, 0.6);
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 20px;
             color: #fff;
+        }
+        
+        .race-status {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            min-width: 120px;
+            margin-right: 10px;
+        }
+        
+        .progress-bar-container {
+            flex: 1;
+            min-width: 200px;
+            height: 10px;
+            background-color: #1a2a3a;
+            border-radius: 5px;
+            margin: 0 10px;
+            overflow: hidden;
+        }
+        
+        .progress-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+            margin-left: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .game-info-panel {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .race-status, .progress-info {
+                margin: 5px 0;
+                width: 100%;
+                text-align: center;
+            }
+            
+            .progress-bar-container {
+                width: 100%;
+                margin: 10px 0;
+            }
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b, #f9d71c);
+            border-radius: 5px;
+            transition: width 0.5s ease;
         }
         
         .next-race-time {
@@ -109,6 +162,96 @@
             font-size: 0.9rem;
             color: #fff;
             font-weight: 500;
+            margin-right: 8px;
+        }
+        
+        /* 완주 시간을 표시하는 요소의 스타일 */
+        .horse-finish-time {
+            font-size: 0.85rem;
+            color: #ffeb3b; /* 밝은 노란색 */
+            font-weight: 700;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        /* 결승선을 통과한 말에 대한 애니메이션 효과 */
+        .horse.finished {
+            animation: finishBlink 1.5s ease-in-out;
+            background-color: rgba(76, 175, 80, 0.3); /* 초록색 배경으로 변경 */
+        }
+        
+        /* 완주 시간이 나타나는 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 말이 결승선을 통과했을 때 깜빡이는 애니메이션 */
+        @keyframes finishBlink {
+            0% { background-color: rgba(76, 175, 80, 0.3); }
+            50% { background-color: rgba(76, 175, 80, 0.7); }
+            100% { background-color: rgba(76, 175, 80, 0.3); }
+        }
+        
+        /* 우승한 말에 대한 특별 효과 애니메이션 */
+        @keyframes winner {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 완주한 레인 스타일 */
+        .race-lane.finished-lane {
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: background-color 0.5s ease;
+        }
+        
+        /* 순위별 레인 색상 */
+        .race-lane.first-rank {
+            background-color: rgba(255, 215, 0, 0.2); /* 금색 배경 */
+            border: 1px solid rgba(255, 215, 0, 0.5);
+        }
+        
+        .race-lane.second-rank {
+            background-color: rgba(192, 192, 192, 0.2); /* 은색 배경 */
+            border: 1px solid rgba(192, 192, 192, 0.5);
+        }
+        
+        .race-lane.third-rank {
+            background-color: rgba(205, 127, 50, 0.2); /* 동색 배경 */
+            border: 1px solid rgba(205, 127, 50, 0.5);
+        }
+        
+        /* 레인에 표시되는 순위 스타일 */
+        .lane-rank {
+            position: absolute;
+            right: 40px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            z-index: 5;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        /* 순위별 색상 */
+        .first-rank .lane-rank {
+            background-color: rgba(255, 215, 0, 0.7); /* 금색 */
+            color: #000;
+        }
+        
+        .second-rank .lane-rank {
+            background-color: rgba(192, 192, 192, 0.7); /* 은색 */
+            color: #000;
+        }
+        
+        .third-rank .lane-rank {
+            background-color: rgba(205, 127, 50, 0.7); /* 동색 */
+            color: #000;
         }
         
         .finish-line {
@@ -396,12 +539,6 @@
             100% { opacity: 1; }
         }
         
-        @keyframes winner {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
         @keyframes horseRun {
             0% { transform: translateX(0) scaleX(1); }
             25% { transform: translateX(5px) scaleX(0.95); }
@@ -448,6 +585,18 @@
             max-height: 200px;
             overflow: auto;
         }
+        
+        /* 게임 진행 상태 표시기 스타일 */
+        /* 이제 사용하지 않는 별도 race-progress-container 스타일 삭제 */
+        .race-progress-container {
+            /* 삭제 */
+        }
+        
+        @keyframes blink {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
     </style>
 </head>
 <body>
@@ -469,9 +618,16 @@
             <div class="game-info-panel">
                 <div class="race-status">
                     <span id="race-status-text" class="betting-phase">베팅 진행 중</span>
+                    <span id="time-remaining">02:00</span>
                 </div>
-                <div class="next-race-time">
-                    다음 경기 시작까지: <span id="time-remaining">00:00</span>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="race-progress-bar"></div>
+                </div>
+                
+                <div class="progress-info">
+                    <span class="progress-text" id="race-progress-text">경기 준비 중...</span>
+                    <span class="progress-percentage" id="race-progress-percentage">0%</span>
                 </div>
             </div>
             

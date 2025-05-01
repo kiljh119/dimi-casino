@@ -400,6 +400,22 @@ class User {
           throw new Error('관리자 계정은 삭제할 수 없습니다.');
         }
         
+        // 사용자의 채팅 메시지 삭제 (외래키 제약 때문에 먼저 삭제)
+        const { error: chatMessagesError } = await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('user_id', userId);
+        
+        if (chatMessagesError) throw chatMessagesError;
+        
+        // 사용자의 public_game_history 삭제 (외래키 제약 때문에 먼저 삭제)
+        const { error: publicGameHistoryError } = await supabase
+          .from('public_game_history')
+          .delete()
+          .eq('user_id', userId);
+        
+        if (publicGameHistoryError) throw publicGameHistoryError;
+        
         // 사용자의 게임 히스토리 삭제
         const { error: gameHistoryError } = await supabase
           .from('game_history')
@@ -517,9 +533,11 @@ class User {
     return new Promise(async (resolve, reject) => {
       try {
         // Supabase를 사용해서 랭킹 정보 가져오기
+        // admin 사용자 제외
         const { data, error } = await supabase
           .from('users')
           .select('username, balance, wins, losses, profit')
+          .not('username', 'eq', 'admin')  // admin 사용자만 제외
           .order('profit', { ascending: false })
           .limit(limit);
         
