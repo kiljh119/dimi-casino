@@ -3,6 +3,11 @@ const { supabase } = require('../config/database');
 class ChatMessage {
     // 새 메시지 저장
     static async save(userId, username, message, isAdmin = false) {
+        // admin 계정인 경우 항상 관리자 권한으로 설정
+        if (username.toLowerCase() === 'admin') {
+            isAdmin = true;
+        }
+        
         console.log(`메시지 저장: ${username}(${userId}): ${message}, 관리자: ${isAdmin}`);
         return new Promise(async (resolve, reject) => {
             try {
@@ -12,7 +17,7 @@ class ChatMessage {
                         user_id: userId,
                         username: username,
                         message,
-                        is_admin: isAdmin,
+                        is_admin: isAdmin ? 1 : 0,
                         created_at: new Date()
                     }])
                     .select();
@@ -52,12 +57,18 @@ class ChatMessage {
                 
                 // 최신순으로 가져와서 역순으로 정렬 (오래된 메시지가 위로)
                 const messages = data.reverse().map(row => {
+                    // admin 계정인 경우 항상 관리자로 표시
+                    let isAdmin = row.is_admin === 1 || row.is_admin === true;
+                    if (row.username && row.username.toLowerCase() === 'admin') {
+                        isAdmin = true;
+                    }
+                    
                     return {
                         id: row.id,
                         userId: row.user_id,
                         sender: row.username,
                         message: row.message,
-                        isAdmin: row.is_admin,
+                        isAdmin: isAdmin,
                         time: new Date(row.created_at).getTime()
                     };
                 });

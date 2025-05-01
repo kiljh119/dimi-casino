@@ -1,13 +1,6 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
-
-// 관리자 권한 확인 미들웨어
-const isAdmin = (req, res, next) => {
-  if (!req.session.isAdmin) {
-    return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
-  }
-  next();
-};
+const { isAdmin } = require('../middlewares/authMiddleware');
 
 // 모든 사용자 조회
 exports.getAllUsers = [isAdmin, async (req, res) => {
@@ -50,21 +43,17 @@ exports.addBalance = [isAdmin, async (req, res) => {
   }
   
   try {
-    await User.addBalance(userId, parseFloat(amount));
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
-    }
+    console.log(`잔액 추가 요청: 사용자 ID ${userId}, 금액 ${amount}`);
+    const result = await User.addBalance(userId, parseFloat(amount));
     
     res.status(200).json({ 
       success: true, 
-      message: `${user.username}님의 잔액이 ${amount}만큼 증가되었습니다.`,
-      newBalance: user.balance
+      message: `${result.username}님의 잔액이 $${amount}만큼 증가되었습니다.`,
+      newBalance: result.newBalance
     });
   } catch (error) {
     console.error('Add balance error:', error);
-    res.status(500).json({ success: false, message: '잔액 추가 중 오류가 발생했습니다.' });
+    res.status(500).json({ success: false, message: '잔액 추가 중 오류가 발생했습니다: ' + error.message });
   }
 }];
 

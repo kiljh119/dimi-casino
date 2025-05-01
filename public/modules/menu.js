@@ -3,15 +3,13 @@
 // DOM 요소
 const mainMenuScreen = document.getElementById('main-menu-screen');
 const playButtons = document.querySelectorAll('.play-btn');
-const adminPanelButton = document.getElementById('admin-panel-button');
-const goToAdminBtn = document.getElementById('go-to-admin');
-const adminScreen = document.getElementById('admin-screen');
+const adminLink = document.getElementById('admin-link'); // 관리자 링크
 const goToMyPageBtn = document.getElementById('go-to-mypage');
 
-// 관리자 화면 표시
+// 관리자 화면 표시 함수 (직접 이동)
 function showAdminScreen() {
-    document.querySelectorAll('.screen').forEach(screen => screen.classList.add('hidden'));
-    adminScreen.classList.remove('hidden');
+    // 관리자 페이지로 이동
+    window.location.href = 'admin.html';
 }
 
 // 메인 메뉴 화면 표시
@@ -49,6 +47,38 @@ function requestUserUpdate(socket) {
 
 // 메뉴 모듈 초기화
 export function initMenu(socket) {
+    // 관리자 버튼 표시 여부 확인 및 설정
+    const currentUser = window.app?.currentUser;
+    if (currentUser && currentUser.isAdmin === true) {
+        console.log('메뉴 모듈에서 관리자 계정 확인됨');
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            // 관리자 링크 표시
+            adminLink.style.display = 'inline-block';
+            adminLink.classList.add('admin-visible');
+            console.log('메뉴 모듈에서 관리자 링크 표시됨');
+        }
+    } else if (currentUser) {
+        console.log('메뉴 모듈에서 일반 사용자 계정 확인됨:', currentUser.username);
+        // 일반 사용자인 경우 관리자 버튼을 확실히 숨김
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            adminLink.style.display = 'none';
+            adminLink.classList.remove('admin-visible');
+        }
+    }
+
+    // 관리자 페이지로 이동 전 처리
+    if (adminLink) {
+        adminLink.addEventListener('click', (e) => {
+            // 사용자 정보를 로컬 스토리지에 저장하고 페이지 이동
+            if (window.app?.currentUser) {
+                console.log('관리자 페이지 이동 전 사용자 정보 저장:', window.app.currentUser);
+                localStorage.setItem('user', JSON.stringify(window.app.currentUser));
+            }
+        });
+    }
+
     // 게임 선택 이벤트 - <a> 태그로 변경되어 이 이벤트는 더 이상 필요하지 않지만 코드는 유지
     playButtons.forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -117,16 +147,6 @@ export function initMenu(socket) {
             }
         });
     }
-    
-    // 관리자 페이지로 이동 버튼
-    goToAdminBtn.addEventListener('click', () => {
-        showAdminScreen();
-    });
-    
-    // 관리자 페이지에서 메뉴로 돌아가기 버튼
-    document.getElementById('admin-back-to-menu').addEventListener('click', () => {
-        showMainMenuScreen();
-    });
     
     // 로그아웃 버튼 이벤트
     document.querySelectorAll('#logout-btn, #menu-logout-btn, #admin-logout-btn').forEach(btn => {

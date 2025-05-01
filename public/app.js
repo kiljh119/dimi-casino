@@ -3,7 +3,6 @@ const socket = io();
 
 // 모듈 가져오기
 import { initMenu } from './modules/menu.js';
-import { initAdmin } from './modules/admin.js';
 
 // 로컬 스토리지 키
 const TOKEN_KEY = 'auth_token';
@@ -16,8 +15,45 @@ function getToken() {
 
 // 사용자 정보 가져오기
 function getUserInfo() {
-    const userJson = localStorage.getItem(USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
+    try {
+        // 먼저 USER_KEY로 시도
+        let userJson = localStorage.getItem(USER_KEY);
+        
+        // USER_KEY로 찾지 못했다면 'user' 키로 시도
+        if (!userJson) {
+            userJson = localStorage.getItem('user');
+            if (userJson) {
+                console.log("'user' 키에서 사용자 정보 찾음");
+            }
+        } else {
+            console.log("USER_KEY에서 사용자 정보 찾음");
+        }
+        
+        if (!userJson) {
+            return null;
+        }
+        
+        // JSON 파싱 및 반환
+        const userData = JSON.parse(userJson);
+        
+        // isAdmin 값이 없고 is_admin이 있다면 변환
+        if (userData && userData.isAdmin === undefined && userData.is_admin !== undefined) {
+            userData.isAdmin = userData.is_admin === 1 || userData.is_admin === true;
+            console.log('사용자 정보 조회 - is_admin을 isAdmin으로 변환:', userData.isAdmin);
+        }
+        
+        // admin 계정은 항상 관리자 권한 부여
+        if (userData && userData.username && userData.username.toLowerCase() === 'admin') {
+            userData.isAdmin = true;
+            userData.is_admin = true;
+            console.log('admin 계정 확인 - 관리자 권한 설정됨');
+        }
+        
+        return userData;
+    } catch (e) {
+        console.error('사용자 정보 가져오기 오류:', e);
+        return null;
+    }
 }
 
 // 로그아웃 처리
@@ -37,7 +73,10 @@ function displayUserInfo(user) {
     }
     
     if (userBalanceElement && user) {
-        if (!user.isAdmin) {
+        // 관리자 여부 - isAdmin 또는 is_admin 필드 확인
+        const isAdminUser = user.isAdmin === true || user.is_admin === 1 || user.is_admin === true;
+        
+        if (!isAdminUser) {
             userBalanceElement.textContent = `$${user.balance.toFixed(2)}`;
         } else {
             userBalanceElement.textContent = '관리자';
@@ -57,6 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
+    // 디버깅: 사용자 정보 출력
+    console.log('현재 사용자 정보:', user);
+    console.log('관리자 권한 여부:', user.isAdmin === true ? "관리자 맞음" : "관리자 아님");
+    
     // 사용자 정보 화면에 표시
     displayUserInfo(user);
     
@@ -65,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 모듈 초기화
     initMenu(socket);
-    initAdmin(socket);
     
     // 전역 객체 설정 (모듈 간 데이터 공유)
     window.app = {
@@ -74,14 +116,47 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // 관리자 패널 표시 여부 결정
-    if (user.isAdmin) {
-        document.getElementById('admin-panel-button').classList.remove('hidden');
+    const isAdminUser = user && (user.isAdmin === true || user.is_admin === 1 || user.is_admin === true || user.username.toLowerCase() === 'admin');
+    
+    if (isAdminUser) {
+        // 디버깅: DOM 확인
+        console.log('관리자 계정 확인됨:', user.username);
+        
+        // 새로운 관리자 버튼 처리
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            adminLink.style.display = 'inline-block';
+            adminLink.classList.add('admin-visible');
+            console.log('관리자 링크 표시됨');
+        } else {
+            console.error('관리자 링크 요소를 찾을 수 없음');
+            
+            // 버튼이 없으면 직접 생성
+            const headerDiv = document.querySelector(".header-actions");
+            if (headerDiv) {
+                const link = document.createElement("a");
+                link.href = "admin.html";
+                link.id = "admin-link";
+                link.className = "admin-visible";
+                link.innerHTML = '<i class="fas fa-cogs"></i> 관리자 페이지';
+                link.style.display = 'inline-block';
+                
+                headerDiv.insertBefore(link, headerDiv.firstChild);
+                console.log("관리자 링크 새로 생성됨");
+            }
+        }
+    } else {
+        console.log('일반 사용자 계정:', user ? user.username : '없음');
+        // 일반 사용자인 경우 관리자 버튼을 확실히 숨김
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) {
+            adminLink.style.display = 'none';
+            adminLink.classList.remove('admin-visible');
+        }
     }
     
     // 소켓 연결 및 로그인 이벤트 발생
-    if (!user.isAdmin) {
-        socket.emit('login', { username: user.username });
-    }
+    socket.emit('login', { username: user.username });
 });
 
 // 소켓 이벤트 리스너 설정

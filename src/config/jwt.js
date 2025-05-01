@@ -16,7 +16,9 @@ const generateToken = (user) => {
   const payload = {
     id: user.id,
     username: user.username,
-    isAdmin: user.isAdmin || false
+    isAdmin: user.isAdmin !== undefined ? user.isAdmin : 
+             user.is_admin !== undefined ? (user.is_admin === 1 || user.is_admin === true) : 
+             false
   };
   
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRE });

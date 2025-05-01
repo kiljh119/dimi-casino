@@ -72,6 +72,7 @@ function setupGameSocket(io) {
           id: socket.id,
           userId: user.id,
           username: username,
+          isAdmin: user.is_admin === true || user.is_admin === 1,
           lastActive: Date.now()
         };
         
@@ -404,8 +405,10 @@ function setupGameSocket(io) {
           time: message.time || Date.now()
         };
         
-        // 특수 명령어 처리 (관리자만 가능)
-        const isAdmin = onlinePlayers[socket.username] && onlinePlayers[socket.username].isAdmin;
+        // 관리자 여부 확인
+        const isAdmin = (onlinePlayers[socket.username] && onlinePlayers[socket.username].isAdmin) || socket.username.toLowerCase() === 'admin';
+        console.log(`채팅 메시지 관리자 여부 확인: ${socket.username}, isAdmin=${isAdmin}, 온라인 플레이어 정보:`, onlinePlayers[socket.username]);
+        
         if (isAdmin && formattedMessage.message.startsWith('/')) {
           const command = formattedMessage.message.slice(1).split(' ')[0];
           const params = formattedMessage.message.slice(command.length + 2);
@@ -443,9 +446,16 @@ function setupGameSocket(io) {
       }
       
       // 관리자 여부 확인
-      const isAdmin = onlinePlayers[socket.username] && onlinePlayers[socket.username].isAdmin;
+      const isAdmin = (onlinePlayers[socket.username] && onlinePlayers[socket.username].isAdmin) || socket.username.toLowerCase() === 'admin';
+      console.log(`채팅 메시지 관리자 여부 확인: ${socket.username}, isAdmin=${isAdmin}, 온라인 플레이어 정보:`, onlinePlayers[socket.username]);
+      
       if (isAdmin) {
         formattedMessage.isAdmin = true;
+        console.log(`관리자 메시지로 표시됨: ${socket.username}, isAdmin 타입: ${typeof formattedMessage.isAdmin}, 값: ${formattedMessage.isAdmin}`);
+      } else {
+        // 명시적으로 false로 설정
+        formattedMessage.isAdmin = false;
+        console.log(`일반 사용자 메시지로 표시됨: ${socket.username}`);
       }
       
       console.log('채팅 메시지 전송:', formattedMessage);
@@ -457,13 +467,16 @@ function setupGameSocket(io) {
         
         // 데이터베이스에 메시지 저장
         try {
+          console.log(`메시지 저장 직전 관리자 여부 확인: ${socket.username}, isAdmin=${formattedMessage.isAdmin}, 타입=${typeof formattedMessage.isAdmin}`);
+          
           await ChatMessage.save(
             socket.userId, 
             formattedMessage.sender, 
             formattedMessage.message, 
-            formattedMessage.isAdmin || false
+            formattedMessage.isAdmin === true
           );
-          console.log('채팅 메시지 저장됨:', formattedMessage.sender);
+          
+          console.log(`채팅 메시지 저장됨: ${formattedMessage.sender}, 관리자=${formattedMessage.isAdmin === true ? 'true' : 'false'}`);
         } catch (err) {
           console.error('채팅 메시지 저장 중 오류:', err);
         }
@@ -587,11 +600,21 @@ function setupGameSocket(io) {
           // 디버깅을 위한 원본 메시지 출력
           console.log('메시지 형식:', msg);
           
+          // isAdmin 값 정확히 확인
+          let isAdmin = msg.isAdmin === true || msg.isAdmin === 1;
+          
+          // admin 계정이면 항상 관리자로 표시
+          if (msg.sender && msg.sender.toLowerCase() === 'admin') {
+            isAdmin = true;
+          }
+          
+          console.log(`메시지 isAdmin 변환: 원본=${msg.isAdmin}, 변환 후=${isAdmin}, 타입=${typeof msg.isAdmin}, 사용자=${msg.sender}`);
+          
           return {
             sender: msg.sender || msg.username || '알 수 없음',
             message: msg.message || msg.text || '',
             time: msg.time || new Date(msg.createdAt || Date.now()).getTime(),
-            isAdmin: msg.isAdmin || false
+            isAdmin: isAdmin
           };
         });
         

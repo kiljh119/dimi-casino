@@ -79,16 +79,20 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, message: '사용자 이름 또는 비밀번호가 잘못되었습니다.' });
     }
     
+    // admin 계정인 경우 항상 관리자 권한 부여
+    const isAdminUser = user.username.toLowerCase() === 'admin';
+    const isAdmin = isAdminUser || user.is_admin === 1;
+    
     // 세션에 사용자 정보 저장 (세션 + JWT 하이브리드 방식)
     req.session.userId = user.id;
     req.session.username = user.username;
-    req.session.isAdmin = user.is_admin === 1; // SQLite에서는 boolean이 0/1로 저장됨
+    req.session.isAdmin = isAdmin;
     
     // JWT 토큰 생성
     const token = generateToken({
       id: user.id,
       username: user.username,
-      isAdmin: user.is_admin === 1
+      isAdmin: isAdmin
     });
     
     res.status(200).json({ 
@@ -98,7 +102,7 @@ exports.login = async (req, res) => {
         id: user.id,
         username: user.username,
         balance: user.balance,
-        isAdmin: user.is_admin === 1
+        isAdmin: isAdmin
       },
       token
     });
@@ -151,11 +155,15 @@ exports.verifyToken = async (req, res) => {
       return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
     }
     
+    // admin 계정인 경우 항상 관리자 권한 부여
+    const isAdminUser = user.username.toLowerCase() === 'admin';
+    const isAdmin = isAdminUser || user.is_admin === 1;
+    
     // 새 토큰 생성
     const newToken = generateToken({
       id: user.id,
       username: user.username,
-      isAdmin: user.is_admin === 1
+      isAdmin: isAdmin
     });
     
     console.log('새 토큰 생성 완료:', newToken.substring(0, 20) + '...');
@@ -167,7 +175,7 @@ exports.verifyToken = async (req, res) => {
         id: user.id,
         username: user.username,
         balance: user.balance,
-        isAdmin: user.is_admin === 1
+        isAdmin: isAdmin
       }
     });
   } catch (error) {

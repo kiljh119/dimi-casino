@@ -40,6 +40,22 @@ function removeToken() {
 function saveUserInfo(user) {
     console.log('사용자 정보 로컬 스토리지에 저장:', user);
     
+    // 관리자 권한 확인 및 설정
+    if (user) {
+        // is_admin 프로퍼티가 있다면 isAdmin으로 변환
+        if (user.isAdmin === undefined && user.is_admin !== undefined) {
+            user.isAdmin = user.is_admin === true || user.is_admin === 1;
+        }
+        
+        // admin 사용자명이면 강제로 관리자 권한 설정
+        if (user.username && user.username.toLowerCase() === 'admin') {
+            user.isAdmin = true;
+            user.is_admin = true;
+        }
+        
+        console.log('저장되는 사용자 정보의 관리자 여부:', user.isAdmin);
+    }
+    
     // window.currentUser에 설정
     window.currentUser = user;
     currentUser = user;
@@ -90,12 +106,29 @@ async function autoLogin() {
                 saveToken(data.token);
             }
             
+            // 사용자 정보와 관리자 권한 확인
+            console.log('자동 로그인 사용자 정보:', data.user);
+            
+            // 명시적으로 isAdmin 속성 설정 (is_admin이 있을 경우 변환)
+            if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
+                data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
+            }
+            
+            // admin 사용자명이면 강제로 관리자 권한 설정
+            if (data.user.username.toLowerCase() === 'admin') {
+                data.user.isAdmin = true;
+                console.log('admin 계정 자동 로그인 - 관리자 권한 설정됨');
+            }
+            
             // 사용자 정보 저장
             saveUserInfo(data.user);
             
             // 관리자 로그인인 경우
-            if (data.user.isAdmin) {
+            if (data.user.isAdmin || data.user.is_admin === true || data.user.is_admin === 1 || data.user.username.toLowerCase() === 'admin') {
+                console.log('관리자 권한으로 자동 로그인 성공');
                 redirectToMainMenu();
+                // 관리자도 소켓에 로그인 정보 전달
+                socket.emit('login', { username: data.user.username });
             } else {
                 // 일반 사용자 로그인
                 socket.emit('login', { username: data.user.username });
@@ -156,11 +189,27 @@ function handleLogin() {
                 saveToken(data.token);
             }
             
-            // 사용자 정보 저장
+            // 사용자 정보 저장 및 관리자 권한 확인
+            console.log('로그인 사용자 정보:', data.user);
+            
+            // 명시적으로 isAdmin 속성 설정 (is_admin이 있을 경우 변환)
+            if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
+                data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
+            }
+            
+            // admin 사용자명이면 강제로 관리자 권한 설정
+            if (data.user.username.toLowerCase() === 'admin') {
+                data.user.isAdmin = true;
+                console.log('admin 계정 로그인 - 관리자 권한 설정됨');
+            }
+            
             saveUserInfo(data.user);
             
             // 관리자 로그인인 경우
-            if (data.user.isAdmin) {
+            if (data.user.isAdmin || data.user.is_admin === true || data.user.is_admin === 1 || data.user.username.toLowerCase() === 'admin') {
+                console.log('관리자 권한으로 로그인 성공');
+                // 관리자도 소켓에 로그인 정보 전달
+                socket.emit('login', { username });
                 redirectToMainMenu();
             } else {
                 // 일반 사용자 로그인

@@ -94,6 +94,17 @@ function removeToken() {
 function saveUserInfo(user) {
     console.log('사용자 정보 로컬 스토리지에 저장:', user);
     
+    // 관리자 정보가 명시적으로 보존되도록 확인
+    if (user) {
+        // is_admin 프로퍼티가 있다면 isAdmin으로 변환 (백엔드 DB 필드명 일관성)
+        if (user.is_admin !== undefined) {
+            user.isAdmin = user.is_admin === 1 || user.is_admin === true;
+        }
+        
+        // 관리자 여부 디버깅
+        console.log('사용자 정보 저장 - 관리자 여부:', user.isAdmin);
+    }
+    
     // window.currentUser에 설정
     window.currentUser = user;
     currentUser = user;
@@ -106,9 +117,44 @@ function saveUserInfo(user) {
         if (token) {
             userData.token = token;
         }
-        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        
+        // 두 키 모두에 저장 (코드 일관성을 위해)
+        const userDataStr = JSON.stringify(userData);
+        localStorage.setItem(USER_KEY, userDataStr);
+        localStorage.setItem('user', userDataStr);
     } catch (e) {
         console.error('사용자 정보 저장 오류:', e);
+    }
+}
+
+// 사용자 정보 가져오기
+function getUserInfo() {
+    try {
+        // 먼저 USER_KEY로 시도
+        let userJson = localStorage.getItem(USER_KEY);
+        
+        // USER_KEY로 찾지 못했다면 'user' 키로 시도
+        if (!userJson) {
+            userJson = localStorage.getItem('user');
+        }
+        
+        if (!userJson) {
+            return null;
+        }
+        
+        // JSON 파싱 및 반환
+        const userData = JSON.parse(userJson);
+        
+        // isAdmin 값이 없고 is_admin이 있다면 변환
+        if (userData && userData.isAdmin === undefined && userData.is_admin !== undefined) {
+            userData.isAdmin = userData.is_admin === 1 || userData.is_admin === true;
+            console.log('사용자 정보 조회 - is_admin을 isAdmin으로 변환:', userData.isAdmin);
+        }
+        
+        return userData;
+    } catch (e) {
+        console.error('사용자 정보 가져오기 오류:', e);
+        return null;
     }
 }
 
@@ -145,7 +191,22 @@ async function autoLogin() {
             // 관리자 로그인인 경우
             if (data.user.isAdmin) {
                 showMainMenuScreen();
-                document.getElementById('admin-panel-button').classList.remove('hidden');
+                const adminPanelButton = document.getElementById('admin-panel-button');
+                if (adminPanelButton) {
+                    // 강력한 표시 방식 적용
+                    adminPanelButton.style = "display: block !important; visibility: visible !important;";
+                    adminPanelButton.classList.remove('hidden');
+                    adminPanelButton.classList.add('admin-visible');
+                    
+                    // a 태그도 확실히 표시
+                    const adminLink = document.getElementById('go-to-admin');
+                    if (adminLink) {
+                        adminLink.style = "display: inline-block !important;";
+                    }
+                    console.log('관리자 패널 버튼 표시됨 (자동 로그인)');
+                } else {
+                    console.error('관리자 패널 버튼 요소를 찾을 수 없음 (자동 로그인)');
+                }
             } else {
                 // 일반 사용자 로그인
                 socketInstance.emit('login', { username: data.user.username });
@@ -209,7 +270,22 @@ function handleLogin() {
             // 관리자 로그인인 경우
             if (data.user.isAdmin) {
                 showMainMenuScreen();
-                document.getElementById('admin-panel-button').classList.remove('hidden');
+                const adminPanelButton = document.getElementById('admin-panel-button');
+                if (adminPanelButton) {
+                    // 강력한 표시 방식 적용
+                    adminPanelButton.style = "display: block !important; visibility: visible !important;";
+                    adminPanelButton.classList.remove('hidden');
+                    adminPanelButton.classList.add('admin-visible');
+                    
+                    // a 태그도 확실히 표시
+                    const adminLink = document.getElementById('go-to-admin');
+                    if (adminLink) {
+                        adminLink.style = "display: inline-block !important;";
+                    }
+                    console.log('관리자 패널 버튼 표시됨 (로그인 처리)');
+                } else {
+                    console.error('관리자 패널 버튼 요소를 찾을 수 없음 (로그인 처리)');
+                }
             } else {
                 // 일반 사용자 로그인
                 socketInstance.emit('login', { username });
@@ -430,12 +506,12 @@ export function initAuth(socket) {
     registerUsername.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') registerPassword.focus();
     });
-    registerPassword.addEventListener('keypress', (e) => {
+    registerPassword.addEventListener('keypress', (e => {
         if (e.key === 'Enter') registerConfirmPassword.focus();
-    });
-    registerConfirmPassword.addEventListener('keypress', (e) => {
+    }));
+    registerConfirmPassword.addEventListener('keypress', (e => {
         if (e.key === 'Enter') handleRegister();
-    });
+    }));
 
     // 로그아웃 이벤트
     document.querySelectorAll('#logout-btn, #menu-logout-btn, #admin-logout-btn').forEach(btn => {
@@ -465,4 +541,12 @@ export function showMainMenuScreen() {
             document.getElementById('menu-user-balance').textContent = '관리자';
         }
     }
-} 
+}
+
+// 내보내기
+export { 
+    handleLogout,
+    getToken,
+    getUserInfo,
+    showMainMenuScreen
+}; 

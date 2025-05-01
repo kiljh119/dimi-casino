@@ -8,6 +8,27 @@
     <link rel="stylesheet" href="menu.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 관리자 버튼 스타일 */
+        #admin-link {
+            display: none; /* 기본적으로 숨김 */
+            padding: 8px 15px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        #admin-link i {
+            margin-right: 5px;
+        }
+        
+        #admin-link.admin-visible {
+            display: inline-block !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -20,10 +41,8 @@
                         <span id="menu-user-balance"></span>
                     </div>
                     <div class="header-actions">
-                        <!-- 관리자만 표시되는 버튼 -->
-                        <div id="admin-panel-button" class="admin-button-container hidden">
-                            <button class="admin-btn" id="go-to-admin"><i class="fas fa-cogs"></i> 관리자 페이지</button>
-                        </div>
+                        <!-- 관리자 버튼 - 단순화된 마크업 -->
+                        <a href="admin.html" id="admin-link"><i class="fas fa-cogs"></i> 관리자 페이지</a>
                         <button id="menu-logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
                     </div>
                 </div>
@@ -71,73 +90,6 @@
                             <a href="ranking.html" class="play-btn" data-game="ranking">바로가기</a>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 관리자 대시보드 화면 -->
-        <div id="admin-screen" class="screen hidden">
-            <header>
-                <div class="game-header">
-                    <div class="game-nav">
-                        <button id="admin-back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
-                        <h2>관리자 대시보드</h2>
-                    </div>
-                    <div class="user-info">
-                        <span id="admin-name">관리자</span>
-                    </div>
-                    <button id="admin-logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
-                </div>
-            </header>
-            
-            <div class="admin-container">
-                <div class="admin-section">
-                    <h3>사용자 관리</h3>
-                    <div class="admin-search">
-                        <input type="text" id="user-search" placeholder="사용자 검색...">
-                        <button id="search-btn"><i class="fas fa-search"></i></button>
-                    </div>
-                    
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>사용자명</th>
-                                    <th>잔액</th>
-                                    <th>승리</th>
-                                    <th>패배</th>
-                                    <th>이익</th>
-                                    <th>관리</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body">
-                                <!-- 사용자 목록이 여기에 동적으로 추가됩니다 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <div class="admin-section">
-                    <h3>잔액 관리</h3>
-                    <div class="balance-control">
-                        <div class="user-select">
-                            <select id="selected-user">
-                                <option value="">사용자 선택</option>
-                                <!-- 사용자 목록이 여기에 동적으로 추가됩니다 -->
-                            </select>
-                        </div>
-                        <div class="amount-input">
-                            <input type="number" id="amount" placeholder="금액">
-                        </div>
-                        <div class="action-buttons">
-                            <button id="add-balance" class="add-btn">잔액 증가</button>
-                            <button id="subtract-balance" class="subtract-btn">잔액 감소</button>
-                        </div>
-                        <div class="action-buttons" style="margin-top: 10px;">
-                            <button id="delete-user" class="delete-btn" style="background-color: #f44336; color: white; width: 100%;">계정 삭제</button>
-                        </div>
-                    </div>
-                    <p id="balance-message" class="message"></p>
                 </div>
             </div>
         </div>

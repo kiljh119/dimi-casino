@@ -29,10 +29,13 @@ exports.authenticateJWT = (req, res, next) => {
       
       console.log('토큰에서 추출된 사용자 정보:', user);
       
+      // admin 사용자 처리 - username이 admin인 경우 관리자 권한 강제 부여
+      const isAdminUser = user.username.toLowerCase() === 'admin';
+      
       // 사용자 정보 설정
       req.session.userId = user.id;
       req.session.username = user.username;
-      req.session.isAdmin = user.isAdmin;
+      req.session.isAdmin = isAdminUser || user.isAdmin || user.is_admin === 1 || user.is_admin === true;
       
       console.log('세션에 설정된 사용자 정보:', req.session);
       

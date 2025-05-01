@@ -35,7 +35,7 @@ class User {
             { 
               username, 
               password: hashedPassword,
-              balance: 0,
+              balance: 1000,
               wins: 0,
               losses: 0,
               profit: 0,
@@ -154,6 +154,43 @@ class User {
     });
   }
 
+  // getAllUsers - 관리자 대시보드용
+  static async getAllUsers() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('username', { ascending: true });
+        
+        if (error) throw error;
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  // searchUsers - 관리자 사용자 검색용
+  static async searchUsers(query) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('username', `%${query}%`)
+          .order('username', { ascending: true });
+        
+        if (error) throw error;
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
   // 잔액 업데이트 및 승패 기록
   static async updateBalance(userId, amount, isWin, isTransaction = false) {
     return new Promise(async (resolve, reject) => {
@@ -208,17 +245,39 @@ class User {
   static async addBalance(userId, amount) {
     return new Promise(async (resolve, reject) => {
       try {
-        // 잔액 업데이트
-        const { data, error } = await supabase
+        // 먼저 현재 사용자 정보 가져오기
+        const { data: user, error: selectError } = await supabase
           .from('users')
-          .update({ balance: supabase.raw(`balance + ${amount}`) })
+          .select('balance, username')
+          .eq('id', userId)
+          .single();
+        
+        if (selectError) throw selectError;
+        if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+        
+        console.log(`사용자 ${user.username}의 현재 잔액: ${user.balance}, 추가할 금액: ${amount}`);
+        
+        // 새 잔액 계산
+        const newBalance = user.balance + parseFloat(amount);
+        
+        // 잔액 업데이트
+        const { data, error: updateError } = await supabase
+          .from('users')
+          .update({ balance: newBalance })
           .eq('id', userId)
           .select();
         
-        if (error) throw error;
+        if (updateError) throw updateError;
         
-        resolve({ changes: 1, newBalance: data[0].balance });
+        console.log(`잔액 업데이트 완료: ${user.balance} -> ${newBalance}`);
+        
+        resolve({ 
+          changes: 1, 
+          newBalance: data[0].balance,
+          username: user.username
+        });
       } catch (error) {
+        console.error('잔액 추가 오류:', error);
         reject(error);
       }
     });
@@ -315,7 +374,8 @@ class User {
         .eq('id', userId)
         .single()
         .then(data => {
-          if (data.is_admin === 1) {
+          // 데이터베이스에서 반환된 값이 boolean이나 숫자일 수 있으므로 두 경우 모두 처리
+          if (data.is_admin === true || data.is_admin === 1) {
             resolve(true);
           } else {
             resolve(false);

@@ -2304,7 +2304,12 @@ body {
 }
 
 .admin-button-container {
-  margin-right: 10px;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.admin-button-container.hidden {
+    display: none !important;
 }
 
 /* 로그아웃 버튼 스타일 */
