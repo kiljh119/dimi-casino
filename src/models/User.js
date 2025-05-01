@@ -6,19 +6,51 @@ class User {
   static async create(username, password) {
     return new Promise(async (resolve, reject) => {
       try {
+        // 먼저 사용자명 중복 확인
+        const { data: existingUser, error: checkError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('username', username)
+          .limit(1)
+          .single();
+        
+        // PGRST116 (레코드 찾을 수 없음) 에러는 사용자가 없다는 의미로 정상입니다
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+        
+        // 이미 사용자가 존재하면 에러 반환
+        if (existingUser) {
+          return reject(new Error('이미 사용 중인 사용자 이름입니다.'));
+        }
+        
         // 비밀번호 해싱
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        // Supabase에 사용자 삽입
+        // Supabase에 사용자 삽입 - id 필드 직접 지정하지 않고 자동 생성되도록 함
         const { data, error } = await supabase
           .from('users')
           .insert([
-            { username, password: hashedPassword }
+            { 
+              username, 
+              password: hashedPassword,
+              balance: 0,
+              wins: 0,
+              losses: 0,
+              profit: 0,
+              is_admin: 0
+            }
           ])
           .select();
         
-        if (error) throw error;
+        if (error) {
+          // 기본 키 충돌 오류 확인
+          if (error.code === '23505') {
+            return reject(new Error('사용자 등록 중 충돌이 발생했습니다. 다시 시도해주세요.'));
+          }
+          throw error;
+        }
         
         resolve(data[0].id);
       } catch (error) {

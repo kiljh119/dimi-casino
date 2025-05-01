@@ -44,6 +44,16 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // 구체적인 에러 메시지 처리
+    if (error.message && error.message.includes('이미 사용 중인 사용자 이름입니다')) {
+      return res.status(400).json({ success: false, message: '이미 사용 중인 사용자 이름입니다.' });
+    }
+    
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, message: '사용자 등록 중 충돌이 발생했습니다. 다시 시도해주세요.' });
+    }
+    
     res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
   }
 };
