@@ -31,6 +31,7 @@ const backToMenuBtn = document.getElementById('back-to-menu');
 const logoutBtn = document.getElementById('logout-btn');
 const userNameDisplay = document.getElementById('user-name');
 const userBalanceDisplay = document.getElementById('user-balance');
+const gameRecords = document.getElementById('game-records');
 console.log('DOM 요소 선택 완료');
 
 // 디버깅: DOM 요소 확인
@@ -174,6 +175,25 @@ function displayGameResult(result) {
         userBalanceDisplay.textContent = `$${newBalance.toFixed(2)}`;
         if (currentUser) {
             currentUser.balance = newBalance;
+        }
+        
+        // 게임 결과를 기록에 추가
+        addGameRecordItem({
+            gameId,
+            playerScore,
+            bankerScore,
+            winner: playerScore > bankerScore ? 'player' : (bankerScore > playerScore ? 'banker' : 'tie'),
+            choice,
+            isWin,
+            bet,
+            winAmount,
+            time: Date.now()
+        });
+        
+        // 게임 기록에 '게임 기록이 없습니다' 메시지가 있으면 제거
+        const noRecordsMessage = gameRecords.querySelector('.no-records-message');
+        if (noRecordsMessage) {
+            noRecordsMessage.remove();
         }
         
         // 게임 상태만 초기화 (카드는 유지)
@@ -372,235 +392,246 @@ function clearChatHistory() {
     console.log('채팅 기록이 삭제되었습니다.');
 }
 
-// 게임 기록 항목 추가
-function updateHistory(historyItem, shouldSave = true) {
-    if (!historyItem) return;
+// 게임 기록 항목 추가 (새로운 스타일)
+function addGameRecordItem(gameData, shouldSave = true) {
+    if (!gameRecords || !gameData) return;
     
-    // 게임 아직 진행 중이면 기록 추가하지 않음
-    if (historyItem.status && historyItem.status !== 'completed') {
-        console.log('완료되지 않은 게임은 기록에 추가하지 않습니다:', historyItem.gameId);
-        return;
-    }
-    
-    const { winner, gameId, player, choice, bet, playerScore, bankerScore, isWin, time, playerCards, bankerCards } = historyItem;
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    
-    // 결과에 따른 클래스 설정
+    // 승패 결과에 따른 클래스와 라벨 설정
     let resultClass = '';
     let resultLabel = '';
-    let resultText = '';
     
-    if (winner === 'player' || (choice === 'player' && isWin)) {
-        resultClass = 'player-win';
-        resultLabel = 'P';
-        resultText = '플레이어';
-    } else if (winner === 'banker' || (choice === 'banker' && isWin)) {
-        resultClass = 'banker-win';
-        resultLabel = 'B';
-        resultText = '뱅커';
-    } else if (winner === 'tie' || (choice === 'tie' && isWin)) {
+    if (gameData.isWin === true) {
+        resultClass = 'win';
+        resultLabel = '승';
+    } else if (gameData.isWin === false) {
+        resultClass = 'lose';
+        resultLabel = '패';
+    } else if (gameData.winner === 'tie') {
         resultClass = 'tie';
-        resultLabel = 'T';
-        resultText = '타이';
-    } else if (isWin === false) {
-        // 패배한 경우 - 선택한 옵션의 반대
-        if (choice === 'player') {
-            resultClass = 'banker-win';
-            resultLabel = 'B';
-            resultText = '뱅커';
-        } else if (choice === 'banker') {
-            resultClass = 'player-win';
-            resultLabel = 'P';
-            resultText = '플레이어';
-        } else {
-            resultClass = 'player-banker';
-            resultLabel = 'PB';
-            resultText = '플레이어/뱅커';
-        }
+        resultLabel = '타이';
     }
     
-    // 게임 ID 표시
-    const displayId = gameId ? gameId.toString().slice(-4) : Math.floor(Math.random() * 9000 + 1000);
+    // 게임 기록 아이템 생성
+    const recordItem = document.createElement('div');
+    recordItem.className = `game-record-item ${resultClass}`;
+    recordItem.textContent = resultLabel;
     
-    // 사용자 이름 표시 (현재 사용자인 경우 특별 표시)
-    const playerName = player || (currentUser ? currentUser.username : '');
-    const isCurrentUser = currentUser && playerName === currentUser.username;
+    // 툴팁 추가
+    const tooltip = document.createElement('div');
+    tooltip.className = 'game-record-tooltip';
     
-    // 베팅 정보 및 선택 정보
-    let betChoiceText = choice ? 
-        (choice === 'player' ? '플레이어' : (choice === 'banker' ? '뱅커' : '타이')) : '';
+    // 선택한 베팅 옵션 표시
+    let betChoiceText = '';
+    if (gameData.choice === 'player') {
+        betChoiceText = '플레이어';
+    } else if (gameData.choice === 'banker') {
+        betChoiceText = '뱅커';
+    } else if (gameData.choice === 'tie') {
+        betChoiceText = '타이';
+    }
     
-    const betInfo = choice && bet 
-        ? `<span class="history-bet" title="${playerName}의 베팅: ${betChoiceText} $${bet}">${choice.charAt(0).toUpperCase()} $${bet}</span>` 
-        : '';
+    tooltip.textContent = `베팅: ${betChoiceText} | 점수: ${gameData.playerScore}:${gameData.bankerScore}`;
     
-    // 점수 정보 추가
-    const scoreInfo = playerScore !== undefined && bankerScore !== undefined 
-        ? `<span class="history-score" title="플레이어: ${playerScore}, 뱅커: ${bankerScore}">${playerScore}:${bankerScore}</span>` 
-        : '';
+    // 게임 ID가 있으면 툴팁에 추가
+    if (gameData.gameId) {
+        tooltip.textContent += ` | #${gameData.gameId.toString().slice(-4)}`;
+    }
     
-    // 승패 정보
-    const winLoseInfo = isWin !== undefined ? 
-        `<span class="history-result-text ${isWin ? 'win' : 'lose'}">${isWin ? '승리' : '패배'}</span>` : '';
+    // 시간 정보 추가
+    if (gameData.time) {
+        const timeStr = new Date(gameData.time).toLocaleTimeString();
+        tooltip.textContent += ` | ${timeStr}`;
+    }
     
-    // 시간 정보
-    const timeText = time ? new Date(time).toLocaleTimeString() : new Date().toLocaleTimeString();
+    document.body.appendChild(tooltip);
     
-    li.innerHTML = `
-        <div class="history-header">
-            <span class="history-id" title="게임 ID: ${displayId}">#${displayId}</span>
-            <span class="history-time" title="게임 시간">${timeText}</span>
-        </div>
-        <div class="history-body">
-            <span class="history-result ${resultClass}" title="승리: ${resultText}">${resultLabel}</span>
-            ${scoreInfo}
-            <div class="history-details">
-                <span class="history-player ${isCurrentUser ? 'current-user' : ''}" title="플레이어">${playerName}</span>
-                ${betInfo}
-                ${winLoseInfo}
-            </div>
-        </div>
-    `;
+    // 데이터 저장 (나중에 클릭 이벤트에서 사용)
+    recordItem.dataset.gameData = JSON.stringify(gameData);
     
-    // 게임 항목 클릭시 상세 정보 보기
-    li.addEventListener('click', () => {
-        showGameDetailsModal(historyItem);
+    // 툴팁 표시 이벤트
+    recordItem.addEventListener('mouseover', function() {
+        const rect = this.getBoundingClientRect();
+        tooltip.style.position = 'fixed';
+        tooltip.style.top = `${rect.bottom + 5}px`;
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.opacity = '1';
+        tooltip.style.zIndex = '1000';
     });
     
-    // 커서를 포인터로 변경하여 클릭 가능함을 표시
-    li.style.cursor = 'pointer';
+    recordItem.addEventListener('mouseout', function() {
+        tooltip.style.opacity = '0';
+    });
     
-    // 최신 기록을 위에 추가
-    historyList.prepend(li);
+    // 클릭 이벤트 (상세 정보 표시)
+    recordItem.addEventListener('click', function() {
+        try {
+            const data = JSON.parse(this.dataset.gameData);
+            showGameRecordModal(data);
+        } catch (err) {
+            console.error('게임 데이터 파싱 오류:', err);
+        }
+    });
     
-    // 20개 이상이면 삭제
-    if (historyList.children.length > 20) {
-        historyList.removeChild(historyList.lastChild);
+    // 게임 기록 컨테이너에 추가 (새로운 게임을 항상 첫 번째에 추가)
+    gameRecords.prepend(recordItem);
+    
+    // 최대 표시 개수 제한 (15개)
+    while (gameRecords.children.length > 15) {
+        gameRecords.removeChild(gameRecords.lastChild);
     }
     
-    // 로컬 스토리지에 저장 (필요한 경우)
+    // 로컬 스토리지에 저장
     if (shouldSave) {
-        // 저장을 위한 객체 생성 (필요한 정보만 포함)
-        const historyToSave = {
-            gameId: gameId || displayId,
-            time: time || Date.now(),
-            player: playerName,
-            choice: choice,
-            bet: bet,
-            playerScore: playerScore,
-            bankerScore: bankerScore,
-            isWin: isWin,
-            winner: winner || resultText,
-            status: 'completed',
-            playerCards: playerCards || [],
-            bankerCards: bankerCards || []
-        };
-        saveGameHistory(historyToSave);
-        
-        // 카드 정보가 있으면 따로 저장 (용량 절약을 위해)
-        if (playerCards || bankerCards) {
-            saveGameCards(gameId || displayId, playerCards, bankerCards);
-        }
+        saveGameRecordToStorage(gameData);
     }
 }
 
-// 게임 카드 정보 저장 (별도 스토리지)
-function saveGameCards(gameId, playerCards, bankerCards) {
+// 게임 기록을 스토리지에 저장
+function saveGameRecordToStorage(gameData) {
     try {
-        // 기존 카드 데이터 불러오기
-        let cardsData = {};
-        const savedCards = localStorage.getItem(STORAGE_CARDS_KEY);
-        if (savedCards) {
-            cardsData = JSON.parse(savedCards);
+        const GAME_RECORDS_KEY = 'baccarat_game_records';
+        let records = [];
+        
+        // 기존 기록 불러오기
+        const savedRecords = localStorage.getItem(GAME_RECORDS_KEY);
+        if (savedRecords) {
+            records = JSON.parse(savedRecords);
         }
         
-        // 새 카드 정보 추가
-        cardsData[gameId] = {
-            playerCards: playerCards || [],
-            bankerCards: bankerCards || []
-        };
+        // 시간 정보가 없으면 현재 시간 추가
+        if (!gameData.time) {
+            gameData.time = Date.now();
+        }
         
-        // 저장 용량 제한을 위해 오래된 항목 삭제 (최대 20개만 유지)
-        const keys = Object.keys(cardsData);
-        if (keys.length > 20) {
-            // 가장 오래된 항목 삭제
-            const oldestKeys = keys.slice(0, keys.length - 20);
-            oldestKeys.forEach(key => {
-                delete cardsData[key];
-            });
+        // 중복 제거 (같은 gameId가 이미 있으면 업데이트)
+        const existingIndex = records.findIndex(r => r.gameId === gameData.gameId);
+        if (existingIndex !== -1) {
+            records[existingIndex] = gameData;
+        } else {
+            // 새 기록 추가
+            records.unshift(gameData);
+        }
+        
+        // 시간순으로 정렬 (최신이 앞에 오도록)
+        records.sort((a, b) => (b.time || 0) - (a.time || 0));
+        
+        // 최대 저장 개수 제한 (50개)
+        if (records.length > 50) {
+            records = records.slice(0, 50);
         }
         
         // 저장
-        localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(cardsData));
-    } catch (error) {
-        console.error('게임 카드 정보 저장 오류:', error);
+        localStorage.setItem(GAME_RECORDS_KEY, JSON.stringify(records));
+    } catch (err) {
+        console.error('게임 기록 저장 오류:', err);
     }
 }
 
-// 게임 카드 정보 로드
-function loadGameCards(gameId) {
+// 저장된 게임 기록 불러오기
+function loadGameRecords() {
     try {
-        const savedCards = localStorage.getItem(STORAGE_CARDS_KEY);
-        if (savedCards) {
-            const cardsData = JSON.parse(savedCards);
-            return cardsData[gameId] || null;
+        const GAME_RECORDS_KEY = 'baccarat_game_records';
+        const savedRecords = localStorage.getItem(GAME_RECORDS_KEY);
+        
+        // 게임 기록 컨테이너 초기화
+        gameRecords.innerHTML = '';
+        
+        if (!savedRecords || JSON.parse(savedRecords).length === 0) {
+            // 기록이 없을 때 메시지 표시
+            const noRecordsMessage = document.createElement('div');
+            noRecordsMessage.className = 'no-records-message';
+            noRecordsMessage.textContent = '게임 기록이 없습니다';
+            gameRecords.appendChild(noRecordsMessage);
+            return;
         }
-        return null;
-    } catch (error) {
-        console.error('게임 카드 정보 로드 오류:', error);
-        return null;
+        
+        // 정렬된 기록 가져오기
+        let records = JSON.parse(savedRecords);
+        
+        // 시간순으로 정렬 (최신이 앞에 오도록)
+        records.sort((a, b) => (b.time || 0) - (a.time || 0));
+        
+        // 각 기록 항목 추가 (최대 15개)
+        const displayRecords = records.slice(0, 15);
+        
+        // 기록이 있는지 확인
+        if (displayRecords.length > 0) {
+            // 순서를 뒤집어서 추가 (과거 → 최신 순으로 DOM에 추가)
+            // 이렇게 하면 flexbox에서 최신 기록이 왼쪽에 표시됨
+            [...displayRecords].reverse().forEach(record => {
+                addGameRecordItem(record, false); // 다시 저장하지 않음
+            });
+            console.log(`${displayRecords.length}개의 게임 기록을 불러왔습니다.`);
+        } else {
+            // 기록이 없을 때 메시지 표시
+            const noRecordsMessage = document.createElement('div');
+            noRecordsMessage.className = 'no-records-message';
+            noRecordsMessage.textContent = '게임 기록이 없습니다';
+            gameRecords.appendChild(noRecordsMessage);
+        }
+    } catch (err) {
+        console.error('게임 기록 불러오기 오류:', err);
+        // 오류 발생 시 메시지 표시
+        gameRecords.innerHTML = '';
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'no-records-message';
+        errorMessage.textContent = '게임 기록을 불러오는 중 오류가 발생했습니다';
+        gameRecords.appendChild(errorMessage);
     }
 }
 
-// 게임 상세 정보 모달 표시
-function showGameDetailsModal(gameData) {
+// 게임 기록 모달 표시
+function showGameRecordModal(gameData) {
     // 이미 모달이 있으면 제거
-    const existingModal = document.getElementById('game-details-modal');
+    const existingModal = document.getElementById('game-record-modal');
     if (existingModal) {
         existingModal.remove();
     }
     
-    // 카드 정보 로드 (없으면 gameData에서 가져옴)
-    let playerCards = gameData.playerCards || [];
-    let bankerCards = gameData.bankerCards || [];
-    
-    if (playerCards.length === 0 || bankerCards.length === 0) {
-        const cardsData = loadGameCards(gameData.gameId);
-        if (cardsData) {
-            playerCards = cardsData.playerCards || [];
-            bankerCards = cardsData.bankerCards || [];
-        }
-    }
-    
     // 모달 생성
     const modal = document.createElement('div');
-    modal.id = 'game-details-modal';
+    modal.id = 'game-record-modal';
     modal.className = 'modal';
     
     // 시간 정보
     const timeText = gameData.time ? new Date(gameData.time).toLocaleString() : new Date().toLocaleString();
     
     // 선택한 베팅 정보
-    const betChoiceText = gameData.choice ? 
-        (gameData.choice === 'player' ? '플레이어' : (gameData.choice === 'banker' ? '뱅커' : '타이')) : '';
+    let betChoiceText = '';
+    if (gameData.choice === 'player') {
+        betChoiceText = '플레이어';
+    } else if (gameData.choice === 'banker') {
+        betChoiceText = '뱅커';
+    } else if (gameData.choice === 'tie') {
+        betChoiceText = '타이';
+    }
     
-    // 결과 정보
-    const resultText = gameData.winner === 'player' ? '플레이어' :
-                      (gameData.winner === 'banker' ? '뱅커' : '타이');
+    // 승자 정보
+    let winnerText = '';
+    if (gameData.winner === 'player') {
+        winnerText = '플레이어';
+    } else if (gameData.winner === 'banker') {
+        winnerText = '뱅커';
+    } else if (gameData.winner === 'tie') {
+        winnerText = '타이';
+    }
+    
+    const isWinClass = gameData.isWin ? 'win-header' : 'lose-header';
+    const resultText = gameData.isWin ? '승리' : '패배';
+    const resultIcon = gameData.isWin ? '🏆' : '💸';
     
     const modalContent = document.createElement('div');
     modalContent.className = 'modal-content game-details-modal-content';
     modalContent.innerHTML = `
-        <div class="modal-header ${gameData.isWin ? 'win-header' : 'lose-header'}">
-            <h3>게임 #${gameData.gameId ? gameData.gameId.toString().slice(-4) : ''} 상세 정보</h3>
+        <div class="modal-header ${isWinClass}">
+            <h3>게임 상세 정보</h3>
             <button class="close-modal-btn">&times;</button>
         </div>
         <div class="modal-body">
             <div class="game-result-banner ${gameData.isWin ? 'win-banner' : 'lose-banner'}">
-                <span class="result-icon">${gameData.isWin ? '🏆' : '💸'}</span>
-                <span class="result-text">${gameData.isWin ? '승리' : '패배'}</span>
-                <span class="result-amount">${gameData.isWin ? `+$${gameData.winAmount || gameData.bet}` : `-$${gameData.bet || 0}`}</span>
+                <span class="result-icon">${resultIcon}</span>
+                <span class="result-text">${resultText}</span>
+                <span class="result-amount">${gameData.isWin ? `+$${gameData.winAmount || 0}` : `-$${gameData.bet || 0}`}</span>
             </div>
             
             <div class="game-info-section">
@@ -609,16 +640,12 @@ function showGameDetailsModal(gameData) {
                     <div class="info-value">${timeText}</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label"><i class="fas fa-user"></i> 플레이어</div>
-                    <div class="info-value">${gameData.player || ''}</div>
-                </div>
-                <div class="info-row">
                     <div class="info-label"><i class="fas fa-dice"></i> 베팅</div>
                     <div class="info-value">${betChoiceText} <span class="bet-amount">$${gameData.bet || 0}</span></div>
                 </div>
                 <div class="info-row">
                     <div class="info-label"><i class="fas fa-trophy"></i> 승자</div>
-                    <div class="info-value">${resultText}</div>
+                    <div class="info-value">${winnerText}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label"><i class="fas fa-calculator"></i> 스코어</div>
@@ -626,17 +653,6 @@ function showGameDetailsModal(gameData) {
                         <span class="player-score">${gameData.playerScore || 0}</span> : 
                         <span class="banker-score">${gameData.bankerScore || 0}</span>
                     </div>
-                </div>
-            </div>
-            
-            <div class="cards-section">
-                <div class="player-cards-section">
-                    <h4><i class="fas fa-user"></i> 플레이어 카드</h4>
-                    <div class="cards-container" id="modal-player-cards"></div>
-                </div>
-                <div class="banker-cards-section">
-                    <h4><i class="fas fa-landmark"></i> 뱅커 카드</h4>
-                    <div class="cards-container" id="modal-banker-cards"></div>
                 </div>
             </div>
         </div>
@@ -669,38 +685,10 @@ function showGameDetailsModal(gameData) {
         }
     });
     
-    // 카드 렌더링
-    const playerCardsContainer = document.getElementById('modal-player-cards');
-    const bankerCardsContainer = document.getElementById('modal-banker-cards');
-    
-    // 카드 표시
-    renderModalCards(playerCardsContainer, playerCards);
-    renderModalCards(bankerCardsContainer, bankerCards);
-    
     // 모달 표시 (애니메이션)
     setTimeout(() => {
         modal.classList.add('show');
     }, 10);
-}
-
-// 모달에 카드 렌더링
-function renderModalCards(container, cards) {
-    if (!container) return;
-    
-    if (!cards || cards.length === 0) {
-        const noCard = document.createElement('div');
-        noCard.className = 'no-card';
-        noCard.textContent = '카드 정보 없음';
-        container.appendChild(noCard);
-        return;
-    }
-    
-    cards.forEach(card => {
-        const cardElement = createCardElement(card);
-        cardElement.classList.add('show'); // 바로 표시
-        cardElement.classList.add('modal-card'); // 모달용 카드 스타일
-        container.appendChild(cardElement);
-    });
 }
 
 // 랭킹 업데이트
@@ -1171,7 +1159,7 @@ function init() {
     loadChatHistory();
     
     // 저장된 게임 기록 불러오기
-    loadGameHistory();
+    loadGameRecords();
     
     console.log("바카라 게임 초기화 완료");
 }
@@ -1204,28 +1192,6 @@ function loadChatHistory() {
         }
     } catch (error) {
         console.error('채팅 기록을 불러오는 중 오류 발생:', error);
-    }
-}
-
-// 로컬 스토리지에서 게임 기록 불러오기
-function loadGameHistory() {
-    try {
-        const savedHistory = localStorage.getItem(GAME_HISTORY_STORAGE_KEY);
-        if (savedHistory) {
-            const gameHistory = JSON.parse(savedHistory);
-            
-            // 기존 기록 비우기
-            historyList.innerHTML = '';
-            
-            // 저장된 게임 기록 표시 (최신순)
-            gameHistory.reverse().forEach(item => {
-                updateHistory(item, false); // 저장 안함
-            });
-            
-            console.log(`${gameHistory.length}개의 게임 기록을 불러왔습니다.`);
-        }
-    } catch (error) {
-        console.error('게임 기록을 불러오는 중 오류 발생:', error);
     }
 }
 
