@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const GameHistory = require('../models/GameHistory');
+const ChatMessage = require('../models/ChatMessage');
+const PublicGameHistory = require('../models/PublicGameHistory');
 const { calculateGameResult } = require('../utils/gameUtils');
 
 // 사용자, 게임 데이터 저장
@@ -258,7 +260,7 @@ function setupGameSocket(io) {
                 // 사용자 잔액 및 통계 업데이트
                 await User.updateBalance(userId, isWin ? winAmount : amount, isWin);
                 
-                // 게임 히스토리 저장
+                // 개인 게임 히스토리 저장
                 await GameHistory.add(
                   userId, 
                   choice, 
@@ -267,6 +269,8 @@ function setupGameSocket(io) {
                   playerScore, 
                   bankerScore
                 );
+                
+                // 공개 게임 히스토리는 게임 완료 후에 저장하도록 변경 (여기서는 저장하지 않음)
                 
                 db.run('COMMIT');
                 
@@ -290,30 +294,60 @@ function setupGameSocket(io) {
                   choice
                 });
                 
+                // 다른 플레이어에게는 진행 중인 게임 알림만 전송 (최종 결과는 game_completed에서 전송)
+                io.emit('other_player_result', {
+                  username,
+                  choice,
+                  betAmount: amount,
+                  isWin,
+                  winAmount: isWin ? winAmount : 0,
+                  playerScore,
+                  bankerScore,
+                  playerCards,
+                  bankerCards,
+                  time: Date.now(),
+                  gameId // 게임 ID 추가
+                });
+                
                 // 게임 완료 및 랭킹 업데이트는 베팅 후 정확히 10초 후에 처리
-                setTimeout(() => {
-                  // 모든 사용자에게 게임 결과 알림
-                  io.emit('game_completed', {
-                    gameId,
-                    player: username,
-                    choice,
-                    bet: amount,
-                    isWin,
-                    playerScore,
-                    bankerScore,
-                    status: 'completed',
-                    time: Date.now(),
-                    winner: playerScore > bankerScore ? 'player' : 
-                            bankerScore > playerScore ? 'banker' : 'tie'
-                  });
-                  
-                  // 랭킹 데이터 계산 및 전송
-                  updateAndSendRankings(io);
-                  
-                  // 시스템 메시지로 알림
-                  io.emit('system_message', `베팅 후 10초: ${username}님의 게임 결과가 랭킹과 기록에 반영되었습니다.`);
-                  
-                  console.log('10초 후 게임 결과 및 랭킹 업데이트 완료:', gameId);
+                setTimeout(async () => {
+                  try {
+                    // 게임이 완료되면 공개 게임 히스토리에 추가
+                    await PublicGameHistory.add(
+                      userId,
+                      username,
+                      choice,
+                      amount,
+                      isWin ? 'win' : 'lose',
+                      winAmount,
+                      playerScore,
+                      bankerScore,
+                      playerCards,
+                      bankerCards
+                    );
+                    
+                    // 모든 사용자에게 게임 결과 알림
+                    io.emit('game_completed', {
+                      gameId,
+                      player: username,
+                      choice,
+                      bet: amount,
+                      isWin,
+                      playerScore,
+                      bankerScore,
+                      status: 'completed',
+                      time: Date.now(),
+                      winner: playerScore > bankerScore ? 'player' : 
+                              bankerScore > playerScore ? 'banker' : 'tie'
+                    });
+                    
+                    // 랭킹 데이터 계산 및 전송
+                    updateAndSendRankings(io);
+                    
+                    console.log('10초 후 게임 결과 및 랭킹 업데이트 완료:', gameId);
+                  } catch (error) {
+                    console.error('게임 완료 처리 중 오류:', error);
+                  }
                 }, 10000); // 베팅 확정 후 정확히 10초 후
               } catch (error) {
                 db.run('ROLLBACK');
@@ -336,7 +370,7 @@ function setupGameSocket(io) {
     });
     
     // 채팅 메시지
-    socket.on('chat_message', (message) => {
+    socket.on('chat_message', async (message) => {
       if (!socket.username) return;
       
       // 메시지 형식 처리 (문자열 또는 객체)
@@ -369,6 +403,13 @@ function setupGameSocket(io) {
             case 'clear':
               // 채팅창 정리 명령
               io.emit('clear_chat');
+              // 데이터베이스 채팅 기록도 삭제
+              try {
+                await ChatMessage.deleteAll();
+                console.log('관리자에 의해 채팅 기록이 삭제됨');
+              } catch (err) {
+                console.error('채팅 기록 삭제 중 오류:', err);
+              }
               return;
             case 'kick':
               // 유저 강퇴
@@ -396,6 +437,19 @@ function setupGameSocket(io) {
       // 금지어 필터링
       formattedMessage.message = filterMessage(formattedMessage.message);
       
+      // 데이터베이스에 메시지 저장
+      try {
+        await ChatMessage.save(
+          socket.userId, 
+          formattedMessage.sender, 
+          formattedMessage.message, 
+          formattedMessage.isAdmin || false
+        );
+        console.log('채팅 메시지 저장됨:', formattedMessage.sender);
+      } catch (err) {
+        console.error('채팅 메시지 저장 중 오류:', err);
+      }
+      
       // 모든 사용자에게 메시지 전달
       io.emit('chat_message', formattedMessage);
     });
@@ -405,7 +459,10 @@ function setupGameSocket(io) {
       // 금지어 목록 (필요에 따라 확장 가능)
       const badWords = ['욕설', '비속어', '심한말'];
       
-      let filteredMessage = message;
+      // XSS 공격 방지를 위한 HTML 이스케이프 처리
+      let filteredMessage = escapeHtml(message);
+      
+      // 금지어 필터링
       badWords.forEach(word => {
         // 금지어를 *로 대체
         const regex = new RegExp(word, 'gi');
@@ -413,6 +470,21 @@ function setupGameSocket(io) {
       });
       
       return filteredMessage;
+    }
+    
+    // HTML 특수 문자 이스케이프 함수
+    function escapeHtml(text) {
+      if (typeof text !== 'string') {
+        return '';
+      }
+      
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/`/g, '&#96;');
     }
     
     // 게임 데이터 요청
@@ -436,19 +508,86 @@ function setupGameSocket(io) {
           console.log('사용자 게임 기록 가져옴:', history.length);
         }
         
+        // 최근 채팅 메시지 가져오기
+        const chatMessages = await ChatMessage.getRecent(50);
+        console.log('채팅 메시지 가져옴:', chatMessages.length);
+        
         // 온라인 플레이어 목록
         const onlinePlayersList = Object.keys(onlinePlayers);
         
         // 데이터 전송
-        console.log(`${socket.username}에게 게임 데이터 전송: 랭킹=${rankings.length}, 히스토리=${history.length}`);
+        console.log(`${socket.username}에게 게임 데이터 전송: 랭킹=${rankings.length}, 히스토리=${history.length}, 채팅=${chatMessages.length}`);
         socket.emit('game_data', {
           rankings,
           history,
-          onlinePlayers: onlinePlayersList
+          onlinePlayers: onlinePlayersList,
+          chatMessages
         });
       } catch (error) {
         console.error('게임 데이터 요청 처리 중 오류:', error);
         socket.emit('error_message', '데이터를 불러오는 중 오류가 발생했습니다.');
+      }
+    });
+    
+    // 채팅 메시지 요청 (새로운 이벤트)
+    socket.on('request_chat_messages', async () => {
+      try {
+        console.log('채팅 메시지 요청됨 - 사용자:', socket.username);
+        const chatMessages = await ChatMessage.getRecent(50);
+        console.log('채팅 메시지 로드 성공:', chatMessages.length, '개 메시지 검색됨');
+        
+        // 메시지 형식 정상화
+        const formattedMessages = chatMessages.map(msg => {
+          // 디버깅을 위한 원본 메시지 출력
+          console.log('메시지 형식:', msg);
+          
+          return {
+            sender: msg.sender || msg.username || '알 수 없음',
+            message: msg.message || msg.text || '',
+            time: msg.time || new Date(msg.createdAt || Date.now()).getTime(),
+            isAdmin: msg.isAdmin || false
+          };
+        });
+        
+        // 특정 사용자에게만 전송
+        socket.emit('chat_history', formattedMessages);
+        console.log('채팅 메시지 전송 완료:', formattedMessages.length);
+      } catch (error) {
+        console.error('채팅 메시지 요청 처리 중 오류:', error);
+        socket.emit('error_message', '채팅 메시지를 불러오는 중 오류가 발생했습니다.');
+      }
+    });
+    
+    // 다른 사용자들의 최근 게임 기록 요청 처리
+    socket.on('request_other_players_history', async () => {
+      try {
+        // 최근 공개 게임 기록 불러오기
+        const recentHistory = await PublicGameHistory.getRecent(20);
+        
+        // 요청한 클라이언트에게만 결과 전송
+        socket.emit('other_players_history', recentHistory);
+        console.log('다른 사용자들의 게임 기록 전송 완료:', recentHistory.length);
+      } catch (error) {
+        console.error('게임 기록 요청 처리 중 오류:', error);
+        socket.emit('error_message', '게임 기록을 불러오는 중 오류가 발생했습니다.');
+      }
+    });
+    
+    // 특정 게임 상세 기록 요청 처리
+    socket.on('request_game_details', async (gameId) => {
+      try {
+        // 게임 기록 ID로 상세 정보 조회
+        const gameDetails = await PublicGameHistory.getById(gameId);
+        
+        if (gameDetails) {
+          socket.emit('game_details', gameDetails);
+          console.log('게임 상세 정보 전송 완료:', gameId);
+        } else {
+          socket.emit('error_message', '해당 게임 기록을 찾을 수 없습니다.');
+        }
+      } catch (error) {
+        console.error('게임 상세 정보 요청 처리 중 오류:', error);
+        socket.emit('error_message', '게임 상세 정보를 불러오는 중 오류가 발생했습니다.');
       }
     });
     

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>바카라 - 카지노넷</title>
+    <title>채팅방 - 카지노넷</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="menu.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -11,13 +11,12 @@
 </head>
 <body>
     <div class="container">
-        <!-- 바카라 게임 화면 -->
-        <div id="game-screen" class="screen">
+        <div id="chat-screen" class="screen">
             <header>
                 <div class="game-header">
                     <div class="game-nav">
                         <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
-                        <h2>바카라</h2>
+                        <h2>채팅방</h2>
                     </div>
                     <div class="user-info">
                         <span id="user-name"></span>
@@ -26,57 +25,9 @@
                 </div>
             </header>
 
-            <div class="game-container">
-                <div class="main-area">
-                    <div class="game-table">
-                        <div class="game-status" id="game-status">베팅을 선택하세요</div>
-                        
-                        <div class="card-area">
-                            <div class="card-section">
-                                <h3>플레이어</h3>
-                                <div class="cards" id="player-cards"></div>
-                                <div class="score" id="player-score"></div>
-                            </div>
-                            <div class="card-section">
-                                <h3>뱅커</h3>
-                                <div class="cards" id="banker-cards"></div>
-                                <div class="score" id="banker-score"></div>
-                            </div>
-                        </div>
-
-                        <div class="betting-area">
-                            <div class="bet-options">
-                                <button class="bet-btn" id="player-btn" data-choice="player">플레이어 (1:1)</button>
-                                <button class="bet-btn" id="tie-btn" data-choice="tie">타이 (8:1)</button>
-                                <button class="bet-btn" id="banker-btn" data-choice="banker">뱅커 (0.95:1)</button>
-                            </div>
-                            <div class="bet-amount">
-                                <span>베팅 금액: </span>
-                                <input type="number" id="bet-amount" value="50" min="10" max="10000">
-                            </div>
-                            <button id="place-bet-btn" disabled>베팅 확정</button>
-                        </div>
-                        
-                        <!-- 게임 기록 섹션 추가 -->
-                        <div class="game-records-section">
-                            <h3>게임 기록</h3>
-                            <div class="game-records-container" id="game-records">
-                                <!-- 여기에 게임 기록이 추가됩니다 -->
-                            </div>
-                        </div>
-                        
-                        <!-- 실시간 게임 현황 섹션 -->
-                        <div class="players-activity-panel">
-                            <h3>실시간 게임 현황</h3>
-                            <div class="activity-container">
-                                <div id="players-activity" class="players-activity"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="side-panel">
-                    <div class="chat-panel">
+            <div class="chat-page-container">
+                <div class="chat-main-panel">
+                    <div class="chat-box">
                         <h3>채팅</h3>
                         <div class="chat-container">
                             <div id="chat-messages" class="chat-messages"></div>
@@ -86,7 +37,9 @@
                             </div>
                         </div>
                     </div>
-
+                </div>
+                
+                <div class="chat-side-panel">
                     <div class="online-players">
                         <h3>접속자 목록</h3>
                         <ul id="online-players-list"></ul>
@@ -99,7 +52,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // 디버깅용 콘솔 메시지
-        console.log('바카라 페이지 로드됨');
+        console.log('채팅 페이지 로드됨');
         
         // 로컬 스토리지에서 사용자 정보 불러오기
         let storedUser = null;
@@ -142,6 +95,6 @@
         };
     </script>
     <script src="js/chat-system.js"></script>
-    <script src="baccarat.js"></script>
+    <script src="chat.js"></script>
 </body>
 </html> 

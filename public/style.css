@@ -496,10 +496,26 @@ body {
 }
 
 .side-panel {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.side-panel .chat-panel {
+  flex: 2;
+}
+
+.side-panel .online-players {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  min-height: 200px;
+}
+
+.side-panel #online-players-list {
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
 .game-table {
@@ -1064,29 +1080,94 @@ body {
 
 #online-players-list {
   list-style-type: none;
-  max-height: 150px;
+  max-height: 300px;
   overflow-y: auto;
+  padding-right: 5px;
+  padding-left: 0;
+  margin: 0;
 }
 
 #online-players-list li {
-  padding: 10px 15px;
-  border-bottom: 1px solid #f0f2f5;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
+  transition: all 0.2s ease;
 }
 
-#online-players-list li::before {
-  content: '';
+#online-players-list li:last-child {
+  border-bottom: none;
+}
+
+#online-players-list li:hover {
+  background-color: rgba(67, 97, 238, 0.05);
+}
+
+.online-indicator {
   display: inline-block;
   width: 8px;
   height: 8px;
   background-color: #38b2ac;
   border-radius: 50%;
   margin-right: 10px;
+  position: relative;
 }
 
-#online-players-list li:last-child {
-  border-bottom: none;
+.online-indicator::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: rgba(56, 178, 172, 0.3);
+  border-radius: 50%;
+  top: -2px;
+  left: -2px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+.online-player {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.online-player.current-user {
+  background-color: rgba(67, 97, 238, 0.08);
+  font-weight: 500;
+}
+
+.online-player.admin-player {
+  background-color: rgba(231, 76, 60, 0.08);
+}
+
+.admin-tag {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  font-size: 0.75em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+}
+
+.online-players {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  max-height: 400px;
 }
 
 .chat-panel {
@@ -2385,4 +2466,621 @@ body {
   .info-value {
     font-size: 1.1rem;
   }
+}
+
+/* 채팅 페이지 스타일 */
+.chat-page-container {
+  display: flex;
+  height: calc(100vh - 80px);
+  padding: 20px;
+  gap: 20px;
+}
+
+.chat-main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-box {
+  background-color: var(--card-color);
+  border-radius: var(--radius-md);
+  padding: 15px;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.chat-side-panel {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .chat-page-container {
+    flex-direction: column;
+  }
+  
+  .chat-side-panel {
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  .chat-box {
+    height: 60vh;
+  }
+}
+
+@media (max-width: 576px) {
+  .chat-page-container {
+    padding: 10px;
+  }
+  
+  .chat-messages {
+    padding: 10px;
+  }
+  
+  #chat-input, #send-chat-btn {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(67, 97, 238, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(67, 97, 238, 0.5);
+}
+
+/* 파이어폭스용 스크롤바 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(67, 97, 238, 0.3) rgba(0, 0, 0, 0.05);
+}
+
+#online-players-list {
+  list-style-type: none;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.online-player {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.online-player.current-user {
+  background-color: rgba(67, 97, 238, 0.08);
+  font-weight: 500;
+}
+
+.online-player.admin-player {
+  background-color: rgba(231, 76, 60, 0.08);
+}
+
+.admin-tag {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  font-size: 0.75em;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+}
+
+/* 채팅방 페이지 스타일 추가 */
+.chat-page-container .chat-side-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-page-container .online-players {
+  flex: 1;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-page-container #online-players-list {
+  flex: 1;
+  max-height: none;
+}
+
+/* 좁은 화면에서의 사이드 패널 처리 */
+@media (max-width: 1200px) {
+  .side-panel {
+    width: 250px;
+  }
+}
+
+@media (max-width: 992px) {
+  .main-area {
+    width: 100%;
+  }
+  
+  .side-panel {
+    width: 100%;
+    flex-direction: row;
+  }
+  
+  .side-panel .chat-panel,
+  .side-panel .online-players {
+    width: 50%;
+    height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .side-panel {
+    flex-direction: column;
+  }
+  
+  .side-panel .chat-panel,
+  .side-panel .online-players {
+    width: 100%;
+  }
+}
+
+/* 게임 현황 패널 스타일 */
+.players-activity-panel {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #f0f2f5;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.players-activity-panel h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.players-activity-panel h3::after {
+  display: none;
+}
+
+.activity-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.players-activity {
+  background-color: #f9fafc;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  max-height: 300px; /* 높이 제한 */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.activity-item {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 3px solid var(--primary-light);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.activity-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.activity-item.win {
+  border-left: 3px solid var(--success-color);
+}
+
+.activity-item.lose {
+  border-left: 3px solid var(--error-color);
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.activity-user {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.9em;
+}
+
+.activity-time {
+  color: var(--text-muted);
+  font-size: 0.8em;
+}
+
+.activity-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-bet {
+  display: flex;
+  align-items: center;
+}
+
+.activity-choice {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  color: white;
+  margin-right: 8px;
+}
+
+.activity-choice.player {
+  background-color: var(--player-color);
+}
+
+.activity-choice.banker {
+  background-color: var(--banker-color);
+}
+
+.activity-choice.tie {
+  background-color: var(--tie-color);
+}
+
+.activity-amount {
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.activity-result {
+  display: flex;
+  align-items: center;
+}
+
+.activity-score {
+  margin-right: 8px;
+  font-size: 0.9em;
+  color: var(--text-color);
+}
+
+.activity-status {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  color: white;
+}
+
+.activity-status.win {
+  background-color: var(--success-color);
+}
+
+.activity-status.lose {
+  background-color: var(--error-color);
+}
+
+.activity-history-toggle {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.activity-history-toggle button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--primary-light);
+  color: white;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.activity-history-toggle button:hover {
+  background-color: var(--primary-color);
+}
+
+.no-activity-message {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 20px 0;
+  font-style: italic;
+}
+
+/* 활동 상세 모달 스타일 */
+.activity-details-modal .modal-content {
+  max-width: 800px;
+}
+
+.activity-details-modal .modal-body {
+  padding: 0;
+}
+
+.activity-filter-bar {
+  padding: 15px;
+  background-color: #f8f9fa;
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.activity-filter-bar select, .activity-filter-bar input {
+  padding: 8px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.activity-filter-bar button {
+  padding: 8px 15px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.activity-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.activity-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.activity-table th, .activity-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eaeaea;
+  font-size: 0.9em;
+}
+
+.activity-table th {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.activity-table tr:hover td {
+  background-color: rgba(67, 97, 238, 0.05);
+}
+
+.activity-pagination {
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #eaeaea;
+}
+
+.activity-pagination button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.activity-pagination button:hover {
+  background-color: var(--primary-light);
+  color: white;
+  border-color: var(--primary-light);
+}
+
+.activity-pagination button.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+/* 활동 카드 컨테이너 스타일 */
+.activity-details {
+  margin-top: 10px;
+  background-color: rgba(67, 97, 238, 0.03);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(67, 97, 238, 0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+.activity-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.activity-cards-section {
+  flex: 1;
+  min-width: 140px;
+}
+
+.activity-cards-section h4 {
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.activity-cards {
+  display: flex;
+  gap: 5px;
+  min-height: 50px;
+}
+
+.mini-card {
+  width: 40px;
+  height: 60px;
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.mini-card.hearts, .mini-card.diamonds {
+  color: #e74c3c;
+}
+
+.mini-card.clubs, .mini-card.spades {
+  color: #333;
+}
+
+.mini-card-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.mini-card-suit {
+  font-size: 14px;
+}
+
+.no-cards {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  padding: 15px 0;
+}
+
+.view-details-btn {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--primary-light);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.view-details-btn:hover {
+  background-color: var(--primary-color);
+}
+
+/* 모달 카드 컨테이너 스타일 */
+.activity-modal-cards {
+  margin-top: 15px;
+}
+
+.activity-modal-cards h4 {
+  margin: 15px 0 10px;
+  font-size: 1rem;
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.modal-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  min-height: 80px;
+  background-color: rgba(67, 97, 238, 0.03);
+  padding: 15px;
+  border-radius: var(--radius-sm);
+}
+
+.no-cards-message {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+  padding: 10px 0;
+}
+
+/* 테이블 뷰에서 카드 정보 표시 */
+.activity-table .card-info-cell {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.card-info-icon {
+  width: 18px;
+  height: 18px;
+  background-color: white;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-info-icon.hearts, .card-info-icon.diamonds {
+  color: #e74c3c;
+}
+
+.card-info-icon.clubs, .card-info-icon.spades {
+  color: #333;
+}
+
+/* 본인의 활동 아이템에 대한 스타일 - 강조 표시 */
+.activity-item.my-activity {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 10px;
+    background-color: rgba(67, 97, 238, 0.05);
+}
+
+/* 임시 활동 아이템 (완료되지 않은 게임) 스타일 */
+.temporary-activity {
+    opacity: 0.7;
+    border-left: 3px dashed #aaa;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    cursor: default;
+    pointer-events: none;
+}
+
+.temporary-badge {
+    background-color: #f0ad4e;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    font-weight: 500;
+    display: inline-block;
 }

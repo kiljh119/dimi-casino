@@ -32,6 +32,8 @@ const logoutBtn = document.getElementById('logout-btn');
 const userNameDisplay = document.getElementById('user-name');
 const userBalanceDisplay = document.getElementById('user-balance');
 const gameRecords = document.getElementById('game-records');
+// 새로운 DOM 요소
+const playersActivity = document.getElementById('players-activity');
 console.log('DOM 요소 선택 완료');
 
 // 디버깅: DOM 요소 확인
@@ -42,13 +44,16 @@ console.log('베팅 확정 버튼:', placeBetBtn);
 let selectedBet = null;
 let isGameInProgress = false;
 
-// 전역 변수에 로컬 스토리지 키 추가
-const CHAT_STORAGE_KEY = 'baccarat_chat_history';
+// 전역 변수 - 공통 채팅 시스템
+let chatSystem = null;
+
+// 전역 변수에 게임 관련 저장소 키 추가
 const GAME_HISTORY_STORAGE_KEY = 'baccarat_game_history';
 const STORAGE_MAX_ITEMS = 50; // 최대 저장 항목 수
-
-// 전역 변수에 모달 관련 변수 추가
 const STORAGE_CARDS_KEY = 'baccarat_game_cards';
+
+// 전역 변수에 진행 중인 게임 목록 추가
+let activeGames = [];
 
 // 페이지 로드 시 로컬 스토리지 데이터로 화면 초기 설정
 if (currentUser) {
@@ -388,7 +393,7 @@ function clearGameHistory() {
 // 게임 기록 클리어 함수 추가
 function clearChatHistory() {
     chatMessages.innerHTML = '';
-    localStorage.removeItem(CHAT_STORAGE_KEY);
+    localStorage.removeItem('baccarat_chat_history');
     console.log('채팅 기록이 삭제되었습니다.');
 }
 
@@ -698,180 +703,570 @@ socket.on('rankings_update', (rankings) => {
     console.log('랭킹이 업데이트되었습니다. 랭킹 및 기록 페이지에서 확인하세요.');
 });
 
-// 온라인 플레이어 목록 업데이트
-function updateOnlinePlayers(players) {
-    console.log('접속자 목록 업데이트:', players);
-    
-    if (!onlinePlayersList) {
-        console.error('온라인 플레이어 목록 요소를 찾을 수 없습니다.');
-        return;
-    }
-    
-    // 접속자 목록 초기화
-    onlinePlayersList.innerHTML = '';
-    
-    // 플레이어 목록이 배열이 아니면 변환
-    const playerList = Array.isArray(players) ? players : 
-                      (typeof players === 'object' ? Object.keys(players) : []);
-    
-    // 각 플레이어에 대한 항목 생성
-    playerList.forEach(player => {
-        const li = document.createElement('li');
-        
-        // player가 문자열인 경우 (username만 전달된 경우)
-        const username = typeof player === 'string' ? player : player.username;
-        const isAdmin = typeof player === 'object' && player.isAdmin;
-        
-        // 관리자는 별도 표시
-        if (isAdmin) {
-            li.innerHTML = `<span class="admin-badge">관리자</span> ${username}`;
-        } else {
-            li.textContent = username;
-        }
-        
-        // 현재 사용자 강조 표시
-        if (currentUser && username === currentUser.username) {
-            li.classList.add('current-user');
-        }
-        
-        onlinePlayersList.appendChild(li);
-    });
-}
+// 온라인 플레이어 목록 업데이트 이벤트
+socket.on('online_players_update', (players) => {
+    console.log('온라인 플레이어 목록 업데이트 이벤트 수신됨');
+    // ChatSystem 모듈에서 처리하므로 여기서는 아무 작업도 하지 않음
+});
 
-// 채팅 메시지 전송
-function sendChatMessage() {
-    const messageText = chatInput.value.trim();
-    if (!messageText) return;
+// 플레이어 활동 아이템 생성 함수
+function createActivityItem(activity) {
+    // 활동 항목 요소 생성
+    const activityItem = document.createElement('div');
     
-    if (!currentUser || !currentUser.username) {
-        console.log('로그인 후 채팅을 이용할 수 있습니다.');
-        return;
-    }
+    // 현재 사용자의 활동인지 확인하여 클래스 추가
+    const isMyActivity = currentUser && activity.username === currentUser.username;
     
-    // 소켓을 통해 서버로 메시지 전송 (사용자 정보도 함께 전송)
-    socket.emit('chat_message', {
-        username: currentUser.username,
-        message: messageText,
-        time: Date.now()
-    });
+    // 임시 게임인지 확인 (완료되지 않은 게임)
+    const isTemporary = activity.temporary === true;
     
-    // 입력 필드 초기화
-    chatInput.value = '';
-}
-
-// 채팅 메시지 표시
-function addChatMessage(message, shouldSave = true) {
-    console.log('채팅 메시지 수신:', message);
+    // 클래스 설정 (승패 결과, 나의 활동 여부, 임시 게임 여부)
+    activityItem.className = `activity-item ${activity.isWin ? 'win' : 'lose'} ${isMyActivity ? 'my-activity' : ''} ${isTemporary ? 'temporary-activity' : ''}`;
     
-    const messageElement = document.createElement('div');
-    messageElement.className = 'chat-message';
-    
-    // 메시지 형식 처리 - 다양한 형태의 메시지 객체 지원
-    let username = '';
-    let text = '';
-    let time = '';
-    
-    if (typeof message === 'object') {
-        // 다양한 필드 이름 처리
-        username = message.sender || message.username || message.user || '알 수 없음';
-        text = message.message || message.text || message.content || '';
-        time = message.time ? new Date(message.time).toLocaleTimeString() : new Date().toLocaleTimeString();
-        
-        // 메시지 객체 자체가 출력된 경우 처리
-        if (text === '[object Object]') {
-            text = JSON.stringify(message.data || message.payload || {});
-            // JSON 형식이 너무 길면 간략화
-            if (text.length > 100) {
-                text = text.substring(0, 100) + '...';
-            }
-        }
-    } else if (typeof message === 'string') {
-        // 문자열 메시지
-        text = message;
-        username = currentUser ? currentUser.username : '나';
-        time = new Date().toLocaleTimeString();
+    // 임시 게임인 경우 타이틀 추가
+    if (isTemporary) {
+        activityItem.title = '진행 중인 게임은 상세 정보를 볼 수 없습니다';
     } else {
-        // 기타 예상치 못한 형식
-        text = '지원되지 않는 메시지 형식';
-        username = '시스템';
-        time = new Date().toLocaleTimeString();
+        activityItem.title = '클릭하여 카드 정보 보기';
     }
     
-    // 본인 메시지 구분
-    if (currentUser && username === currentUser.username) {
-        messageElement.classList.add('my-message');
+    if (activity.gameId) {
+        activityItem.dataset.gameId = activity.gameId;
     }
     
-    // 관리자 메시지 구분
-    if (message.isAdmin) {
-        messageElement.classList.add('admin-message');
-        messageElement.innerHTML = `
-            <div class="message-info">
-                <span class="admin-badge">관리자</span>
-                <span class="message-sender">${username}</span>
-                <span class="message-time">${time}</span>
-            </div>
-            <div class="message-text">${text}</div>
-        `;
-    } else {
-        messageElement.innerHTML = `
-            <div class="message-info">
-                <span class="message-sender">${username}</span>
-                <span class="message-time">${time}</span>
-            </div>
-            <div class="message-text">${text}</div>
-        `;
+    activityItem.dataset.id = activity.id;
+    activityItem.dataset.expanded = 'false';
+    
+    // 활동 데이터 저장 (나중에 참조하기 위해)
+    activityItem.dataset.gameData = JSON.stringify(activity);
+    
+    // 선택한 베팅 옵션 텍스트
+    let choiceText = '';
+    if (activity.choice === 'player') {
+        choiceText = '플레이어';
+    } else if (activity.choice === 'banker') {
+        choiceText = '뱅커';
+    } else if (activity.choice === 'tie') {
+        choiceText = '타이';
     }
     
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // 시간 포맷팅
+    const timeStr = new Date(activity.time).toLocaleTimeString();
     
-    // 로컬 스토리지에 저장 (필요한 경우)
-    if (shouldSave) {
-        const messageToSave = {
-            sender: username,
-            message: text,
-            time: message.time || Date.now(),
-            isAdmin: message.isAdmin || false
-        };
-        saveChatMessage(messageToSave);
-    }
-}
-
-// 시스템 메시지 표시
-function addSystemMessage(text, shouldSave = true) {
-    const messageElement = document.createElement('div');
-    messageElement.className = 'chat-message system-message';
-    
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const timeString = `${hours}:${minutes}`;
-    
-    messageElement.innerHTML = `
-        <div class="message-info">
-            <span class="message-sender">시스템</span>
-            <span class="message-time">${timeString}</span>
+    // HTML 구성 - 기본 정보
+    activityItem.innerHTML = `
+        <div class="activity-header">
+            <span class="activity-user">${activity.username}${isMyActivity ? ' (나)' : ''}</span>
+            <span class="activity-time">${timeStr}</span>
         </div>
-        <div class="message-text">${text}</div>
+        <div class="activity-content">
+            <div class="activity-bet">
+                <span class="activity-choice ${activity.choice}">${choiceText}</span>
+                <span class="activity-amount">$${activity.betAmount.toFixed(2)}</span>
+            </div>
+            <div class="activity-result">
+                ${isTemporary ? 
+                    '<span class="activity-score">준비 중</span><span class="temporary-badge">진행 중</span>' : 
+                    `<span class="activity-score">${activity.playerScore}:${activity.bankerScore}</span>
+                     <span class="activity-status ${activity.isWin ? 'win' : 'lose'}">${activity.isWin ? '승리' : '패배'}</span>`
+                }
+            </div>
+        </div>
+        <div class="activity-details" style="display: none;">
+            <div class="activity-cards-container">
+                <div class="activity-cards-section">
+                    <h4>플레이어 카드</h4>
+                    <div class="activity-cards player-cards"></div>
+                </div>
+                <div class="activity-cards-section">
+                    <h4>뱅커 카드</h4>
+                    <div class="activity-cards banker-cards"></div>
+                </div>
+            </div>
+        </div>
     `;
     
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // 클릭 이벤트 추가 (확장/축소)
+    activityItem.addEventListener('click', (e) => {
+        // 임시 게임(진행 중인 게임)인 경우 클릭 동작 비활성화
+        if (isTemporary) {
+            console.log('진행 중인 게임은 상세 정보를 볼 수 없습니다.');
+            return;
+        }
+        
+        const detailsSection = activityItem.querySelector('.activity-details');
+        const isExpanded = activityItem.dataset.expanded === 'true';
+        
+        if (isExpanded) {
+            // 축소
+            detailsSection.style.display = 'none';
+            activityItem.dataset.expanded = 'false';
+        } else {
+            // 확장 - 카드 정보 표시
+            detailsSection.style.display = 'block';
+            activityItem.dataset.expanded = 'true';
+            
+            // 카드 표시
+            renderActivityCards(activity, activityItem);
+        }
+    });
     
-    // 로컬 스토리지에 저장 (필요한 경우)
-    if (shouldSave) {
-        const messageToSave = {
-            sender: '시스템',
-            message: text,
-            time: now.getTime(),
-            isSystem: true
-        };
-        saveChatMessage(messageToSave);
+    return activityItem;
+}
+
+// 활동 아이템에 카드 렌더링
+function renderActivityCards(activity, activityItem) {
+    const playerCardsContainer = activityItem.querySelector('.activity-cards.player-cards');
+    const bankerCardsContainer = activityItem.querySelector('.activity-cards.banker-cards');
+    
+    // 이미 카드가 렌더링되어 있으면 건너뜀
+    if (playerCardsContainer.children.length > 0) return;
+    
+    // 플레이어 카드 렌더링
+    if (Array.isArray(activity.playerCards) && activity.playerCards.length > 0) {
+        activity.playerCards.forEach(card => {
+            const cardElement = createMiniCardElement(card);
+            playerCardsContainer.appendChild(cardElement);
+        });
+    } else {
+        playerCardsContainer.innerHTML = '<div class="no-cards">카드 정보 없음</div>';
+    }
+    
+    // 뱅커 카드 렌더링
+    if (Array.isArray(activity.bankerCards) && activity.bankerCards.length > 0) {
+        activity.bankerCards.forEach(card => {
+            const cardElement = createMiniCardElement(card);
+            bankerCardsContainer.appendChild(cardElement);
+        });
+    } else {
+        bankerCardsContainer.innerHTML = '<div class="no-cards">카드 정보 없음</div>';
     }
 }
 
-// 소켓 이벤트 리스너 설정
+// 작은 카드 요소 생성
+function createMiniCardElement(card) {
+    const cardElement = document.createElement('div');
+    cardElement.className = `mini-card ${card.suit}`;
+    
+    // 카드 텍스트 (숫자 + 무늬)
+    const value = getCardDisplayValue(card.value);
+    const suit = getSuitSymbol(card.suit);
+    
+    cardElement.innerHTML = `
+        <div class="mini-card-value">${value}</div>
+        <div class="mini-card-suit">${suit}</div>
+    `;
+    
+    return cardElement;
+}
+
+// 활동 상세 정보 모달 표시
+function showActivityDetailsModal(activity) {
+    // 이미 모달이 있으면 제거
+    const existingModal = document.getElementById('activity-details-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 시간 포맷팅
+    const timeStr = new Date(activity.time).toLocaleString();
+    
+    // 선택한 베팅 정보
+    let choiceText = '';
+    if (activity.choice === 'player') {
+        choiceText = '플레이어';
+    } else if (activity.choice === 'banker') {
+        choiceText = '뱅커';
+    } else if (activity.choice === 'tie') {
+        choiceText = '타이';
+    }
+    
+    // 모달 생성
+    const modal = document.createElement('div');
+    modal.id = 'activity-details-modal';
+    modal.className = 'modal activity-details-modal';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    const isWinClass = activity.isWin ? 'win-header' : 'lose-header';
+    
+    modalContent.innerHTML = `
+        <div class="modal-header ${isWinClass}">
+            <h3>게임 상세 정보</h3>
+            <button class="close-modal-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="game-info-section">
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-user"></i> 플레이어</div>
+                    <div class="info-value">${activity.username}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-calendar-alt"></i> 일시</div>
+                    <div class="info-value">${timeStr}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-dice"></i> 베팅</div>
+                    <div class="info-value">${choiceText} <span class="bet-amount">$${activity.betAmount.toFixed(2)}</span></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-trophy"></i> 결과</div>
+                    <div class="info-value">
+                        <span class="${activity.isWin ? 'success-color' : 'error-color'}">${activity.isWin ? '승리' : '패배'}</span>
+                        ${activity.isWin ? `(+$${activity.winAmount.toFixed(2)})` : ''}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-calculator"></i> 스코어</div>
+                    <div class="info-value">
+                        <span class="player-score">${activity.playerScore}</span> : 
+                        <span class="banker-score">${activity.bankerScore}</span>
+                    </div>
+                </div>
+                <hr>
+                <div class="activity-modal-cards">
+                    <h4>플레이어 카드</h4>
+                    <div class="modal-cards-container player-cards-container"></div>
+                    <h4>뱅커 카드</h4>
+                    <div class="modal-cards-container banker-cards-container"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 모달에 카드 표시
+    const playerCardsContainer = modal.querySelector('.player-cards-container');
+    const bankerCardsContainer = modal.querySelector('.banker-cards-container');
+    
+    // 플레이어 카드
+    if (Array.isArray(activity.playerCards) && activity.playerCards.length > 0) {
+        activity.playerCards.forEach(card => {
+            const cardElement = createCardElement(card);
+            playerCardsContainer.appendChild(cardElement);
+        });
+    } else {
+        playerCardsContainer.innerHTML = '<div class="no-cards-message">카드 정보가 없습니다</div>';
+    }
+    
+    // 뱅커 카드
+    if (Array.isArray(activity.bankerCards) && activity.bankerCards.length > 0) {
+        activity.bankerCards.forEach(card => {
+            const cardElement = createCardElement(card);
+            bankerCardsContainer.appendChild(cardElement);
+        });
+    } else {
+        bankerCardsContainer.innerHTML = '<div class="no-cards-message">카드 정보가 없습니다</div>';
+    }
+    
+    // 모달 닫기 버튼
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+    });
+    
+    // 모달 외부 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+        }
+    });
+    
+    // ESC 키로 닫기
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
+    
+    // 모달 표시 (애니메이션)
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+// 전체 활동 기록 모달 표시
+function showAllActivityModal() {
+    // 이미 모달이 있으면 제거
+    const existingModal = document.getElementById('all-activity-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 모달 생성
+    const modal = document.createElement('div');
+    modal.id = 'all-activity-modal';
+    modal.className = 'modal activity-details-modal';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    modalContent.innerHTML = `
+        <div class="modal-header">
+            <h3>전체 게임 현황</h3>
+            <button class="close-modal-btn">&times;</button>
+            </div>
+        <div class="activity-filter-bar">
+            <select id="filter-user">
+                <option value="">모든 플레이어</option>
+            </select>
+            <select id="filter-result">
+                <option value="">모든 결과</option>
+                <option value="win">승리</option>
+                <option value="lose">패배</option>
+            </select>
+            <button id="apply-filter">필터 적용</button>
+            </div>
+        <div class="activity-table-container">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>플레이어</th>
+                        <th>베팅</th>
+                        <th>금액</th>
+                        <th>결과</th>
+                        <th>점수</th>
+                        <th>카드 정보</th>
+                        <th>시간</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-table-body">
+                    <tr>
+                        <td colspan="7" class="loading-message">기록 불러오는 중...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="activity-pagination">
+            <button data-page="1" class="active">1</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 서버에서 활동 기록 가져오기
+    socket.emit('request_other_players_history');
+    
+    // 모달 닫기 버튼
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+    });
+    
+    // 모달 외부 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+        }
+    });
+    
+    // ESC 키로 닫기
+    document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') {
+            modal.classList.remove('show');
+            setTimeout(() => modal.remove(), 300); // 애니메이션 후 제거
+            document.removeEventListener('keydown', escHandler);
+        }
+    });
+    
+    // 모달 표시 (애니메이션)
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+// 활동 기록을 테이블에 표시
+function displayActivityHistory(activities) {
+    const tableBody = document.getElementById('activity-table-body');
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    if (!activities || activities.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="7" class="no-activity-message">게임 기록이 없습니다</td>`;
+        tableBody.appendChild(row);
+        return;
+    }
+    
+    // 플레이어 필터 옵션 업데이트
+    const filterUser = document.getElementById('filter-user');
+    if (filterUser) {
+        // 기존 옵션 유지하면서 새 사용자 추가
+        const existingUsers = new Set(Array.from(filterUser.options)
+            .map(option => option.value)
+            .filter(value => value !== ''));
+        
+        const newUsers = new Set(activities.map(activity => activity.username));
+        
+        newUsers.forEach(username => {
+            if (!existingUsers.has(username)) {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = username;
+                filterUser.appendChild(option);
+            }
+        });
+    }
+    
+    activities.forEach(activity => {
+        const row = document.createElement('tr');
+        
+        // 선택한 베팅 옵션 텍스트
+        let choiceText = '';
+        if (activity.choice === 'player') {
+            choiceText = '플레이어';
+        } else if (activity.choice === 'banker') {
+            choiceText = '뱅커';
+        } else if (activity.choice === 'tie') {
+            choiceText = '타이';
+        }
+        
+        // 시간 포맷팅
+        const timeStr = new Date(activity.time).toLocaleTimeString();
+        
+        // 카드 정보 간략하게 표시
+        let playerCardSummary = '';
+        let bankerCardSummary = '';
+        
+        if (Array.isArray(activity.playerCards) && activity.playerCards.length > 0) {
+            playerCardSummary = `<div class="card-info-cell">`;
+            activity.playerCards.forEach(card => {
+                const value = getCardDisplayValue(card.value);
+                const suit = getSuitSymbol(card.suit);
+                playerCardSummary += `<div class="card-info-icon ${card.suit}" title="${value}${suit}">${value}</div>`;
+            });
+            playerCardSummary += `</div>`;
+        } else {
+            playerCardSummary = '-';
+        }
+        
+        if (Array.isArray(activity.bankerCards) && activity.bankerCards.length > 0) {
+            bankerCardSummary = `<div class="card-info-cell">`;
+            activity.bankerCards.forEach(card => {
+                const value = getCardDisplayValue(card.value);
+                const suit = getSuitSymbol(card.suit);
+                bankerCardSummary += `<div class="card-info-icon ${card.suit}" title="${value}${suit}">${value}</div>`;
+            });
+            bankerCardSummary += `</div>`;
+        } else {
+            bankerCardSummary = '-';
+        }
+        
+        row.innerHTML = `
+            <td>${activity.username}</td>
+            <td><span class="activity-choice ${activity.choice}">${choiceText}</span></td>
+            <td>$${activity.betAmount.toFixed(2)}</td>
+            <td><span class="activity-status ${activity.isWin ? 'win' : 'lose'}">${activity.isWin ? '승리' : '패배'}</span></td>
+            <td>${activity.playerScore}:${activity.bankerScore}</td>
+            <td>${playerCardSummary} / ${bankerCardSummary}</td>
+            <td>${timeStr}</td>
+        `;
+        
+        // 행 클릭 시 상세 정보 표시
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+            showActivityDetailsModal(activity);
+        });
+        
+        tableBody.appendChild(row);
+    });
+}
+
+// 활동 패널 초기화
+function initActivityPanel() {
+    // 활동 목록이 비어 있으면 메시지 표시
+    if (!playersActivity.children.length) {
+        const noActivityMessage = document.createElement('div');
+        noActivityMessage.className = 'no-activity-message';
+        noActivityMessage.textContent = '아직 게임 기록이 없습니다';
+        playersActivity.appendChild(noActivityMessage);
+    }
+}
+
+// 활동 아이템 추가
+function addActivityItem(activity, prepend = true) {
+    // 'no-activity-message' 클래스를 가진 요소 찾기
+    const noActivityMessage = playersActivity.querySelector('.no-activity-message');
+    
+    // 메시지가 있으면 제거
+    if (noActivityMessage) {
+        playersActivity.removeChild(noActivityMessage);
+    }
+    
+    // 활동 아이템 생성
+    const activityItem = createActivityItem(activity);
+    
+    // 앞에 추가할지 뒤에 추가할지
+    if (prepend) {
+        playersActivity.prepend(activityItem);
+    } else {
+        playersActivity.appendChild(activityItem);
+    }
+    
+    // 최대 10개만 표시
+    while (playersActivity.children.length > 10) {
+        playersActivity.removeChild(playersActivity.lastChild);
+    }
+}
+
+// 진행 중인 게임 저장
+function saveActiveGames() {
+    try {
+        sessionStorage.setItem('baccarat_active_games', JSON.stringify(activeGames));
+    } catch (error) {
+        console.error('진행 중인 게임 저장 오류:', error);
+    }
+}
+
+// 진행 중인 게임 불러오기
+function loadActiveGames() {
+    try {
+        const savedGames = sessionStorage.getItem('baccarat_active_games');
+        if (savedGames) {
+            activeGames = JSON.parse(savedGames);
+            console.log('진행 중인 게임 로드:', activeGames.length, '개');
+        }
+    } catch (error) {
+        console.error('진행 중인 게임 로드 오류:', error);
+        activeGames = [];
+    }
+}
+
+// 진행 중인 게임 추가
+function addActiveGame(game) {
+    // 이미 있는 게임인지 확인
+    const existingIndex = activeGames.findIndex(g => g.gameId === game.gameId);
+    
+    if (existingIndex === -1) {
+        // 새 게임 추가
+        activeGames.push(game);
+    } else {
+        // 기존 게임 업데이트
+        activeGames[existingIndex] = game;
+    }
+    
+    // 세션 스토리지에 저장
+    saveActiveGames();
+}
+
+// 완료된 게임 제거
+function removeActiveGame(gameId) {
+    activeGames = activeGames.filter(game => game.gameId !== gameId);
+    saveActiveGames();
+}
+
+// 소켓 이벤트 리스너 설정 수정
 function setupSocketListeners() {
     console.log("바카라 소켓 이벤트 리스너 설정 중...");
     
@@ -922,6 +1317,9 @@ function setupSocketListeners() {
             
             // 게임 데이터 요청
             socket.emit('request_game_data');
+            
+            // 다른 플레이어의 게임 기록 요청
+            socket.emit('request_other_players_history');
         } else {
             // 로그인 실패
             gameStatus.textContent = response.message || '로그인에 실패했습니다.';
@@ -949,106 +1347,239 @@ function setupSocketListeners() {
             gameStatus.textContent = '인증에 실패했습니다. 로그인 페이지로 이동합니다.';
             gameStatus.className = 'error';
             
-            // 로컬 스토리지 정보가 유효하지 않으면 제거
-            localStorage.removeItem('user');
-            
             setTimeout(() => {
                 window.location.href = '/';
             }, 2000);
         }
     });
     
-    // 게임 데이터 수신
-    socket.on('game_data', (data) => {
-        console.log('게임 데이터 수신:', data);
-        // 게임 기록과 랭킹은 더 이상 여기서 업데이트하지 않음
-        updateOnlinePlayers(data.onlinePlayers);
-    });
-    
-    // 베팅 결과 수신 - 서버에서 던지는 이벤트 이름으로 수정 (중요: bet_result → game_result)
+    // 게임 결과 수신 이벤트
     socket.on('game_result', (result) => {
-        console.log('베팅 결과 수신:', result);
+        console.log('게임 결과 수신:', result);
         
-        // 게임 결과 표시 - 애니메이션만 시작하고 기록은 아직 업데이트하지 않음
+        // 게임 결과 표시
         displayGameResult(result);
-    });
-
-    // 게임 완료 이벤트 수신 - 기록 업데이트
-    socket.on('game_completed', (gameData) => {
-        console.log('게임 완료 알림 (베팅 후 10초):', gameData);
         
-        // 게임 기록 및 랭킹이 업데이트되었음을 알림 (채팅창에는 표시하지 않음)
-        console.log('게임 결과가 기록되었습니다. 랭킹 및 기록 페이지에서 확인하세요.');
-    });
-    
-    // 온라인 플레이어 목록 업데이트 (이벤트 두 가지 모두 처리)
-    socket.on('online_players', (players) => {
-        updateOnlinePlayers(players);
-    });
-    
-    socket.on('online_players_update', (players) => {
-        updateOnlinePlayers(players);
-    });
-    
-    // 채팅 메시지 수신
-    socket.on('chat_message', (message) => {
-        addChatMessage(message);
-    });
-    
-    // 시스템 메시지 수신
-    socket.on('system_message', (message) => {
-        // 시스템 메시지는 콘솔에만 표시
-        console.log('시스템 메시지:', message);
-    });
-    
-    // 채팅창 정리 명령 처리
-    socket.on('clear_chat', () => {
-        clearChatHistory();
-        console.log('관리자가 채팅창을 정리했습니다.');
-    });
-    
-    // 오류 메시지 수신
-    socket.on('error_message', (message) => {
-        console.error('오류 메시지:', message);
-        gameStatus.textContent = message;
-        gameStatus.className = 'error';
-        resetGameState();
-    });
-    
-    // 성공 메시지 수신
-    socket.on('success_message', (message) => {
-        gameStatus.textContent = message;
-        gameStatus.className = 'success';
-    });
-    
-    // 잔액 업데이트 수신
-    socket.on('balance_update', (data) => {
-        currentUser.balance = data.balance;
-        userBalanceDisplay.textContent = `$${data.balance.toFixed(2)}`;
-    });
-    
-    // 서버에서 보내는 에러 메시지 처리
-    socket.on('error', (error) => {
-        console.error('서버 오류:', error);
-        gameStatus.textContent = error.message || '오류가 발생했습니다';
-        gameStatus.className = 'error';
-        resetGameState();
-    });
-    
-    // 베팅 응답 처리
-    socket.on('bet_response', (response) => {
-        console.log('베팅 응답:', response);
-        if (!response.success) {
-            gameStatus.textContent = response.message;
-            gameStatus.className = 'error';
-            resetGameState();
+        // 자신의 게임 결과도 활동 패널에 추가
+        if (result.playerCards && result.bankerCards) {
+            const activityData = {
+                gameId: result.gameId, // 게임 ID 추가
+                username: currentUser.username,
+                choice: result.choice,
+                betAmount: result.bet,
+                isWin: result.isWin,
+                winAmount: result.isWin ? result.winAmount : 0,
+                playerScore: result.playerScore,
+                bankerScore: result.bankerScore,
+                playerCards: result.playerCards,
+                bankerCards: result.bankerCards,
+                time: Date.now(),
+                temporary: true // 임시 플래그 추가
+            };
+            
+            // 진행 중인 게임에 추가
+            addActiveGame(activityData);
+            
+            // 활동 패널에 추가
+            addActivityItem(activityData);
         }
     });
     
-    // 메뉴로 돌아가기 처리
-    socket.on('return_to_menu', () => {
-        window.location.href = '/';
+    // 사용자 정보 업데이트 이벤트
+    socket.on('user_info_update', (userData) => {
+        console.log('사용자 정보 업데이트:', userData);
+        updateUserInfo(userData);
     });
+    
+    // 랭킹 업데이트 이벤트
+    socket.on('rankings_update', (rankings) => {
+        console.log('랭킹 업데이트:', rankings);
+        // 랭킹 표시 함수 호출 (필요한 경우)
+    });
+
+    // 베팅 응답 처리
+    socket.on('bet_response', (response) => {
+        console.log('베팅 응답:', response);
+        
+        if (!response.success) {
+            // 베팅 실패 처리
+            isGameInProgress = false;
+            placeBetBtn.disabled = false;
+            betOptions.forEach(btn => btn.disabled = false);
+            betAmount.disabled = false;
+            
+            gameStatus.textContent = response.message || '베팅 처리 중 오류가 발생했습니다.';
+            gameStatus.className = 'error';
+        }
+    });
+    
+    // 에러 메시지 처리
+    socket.on('error_message', (message) => {
+        console.error('서버 오류:', message);
+        gameStatus.textContent = message;
+        gameStatus.className = 'error';
+    });
+
+    // 다른 플레이어 게임 결과 수신
+    socket.on('other_player_result', (result) => {
+        console.log('다른 플레이어 게임 결과 수신:', result);
+        
+        // 자신의 게임 결과인 경우 무시 (이미 game_result 이벤트에서 처리됨)
+        if (currentUser && result.username === currentUser.username) {
+            console.log('자신의 게임 결과이므로 무시');
+            return;
+        }
+        
+        // 이미 같은 게임 ID가 활동 패널에 표시되어 있는지 확인
+        if (result.gameId && playersActivity.querySelector(`[data-game-id="${result.gameId}"]`)) {
+            console.log('이미 표시된 게임 ID:', result.gameId);
+            return;
+        }
+        
+        // 자신의 결과가 아닌 경우에만 활동 패널에 추가
+        const activityWithGameId = { ...result, temporary: true }; // 임시 표시
+        addActivityItem(activityWithGameId);
+    });
+    
+    // 게임 완료 처리 이벤트
+    socket.on('game_completed', (completedGame) => {
+        console.log('게임 완료 처리:', completedGame);
+        
+        // 활동 패널에서 같은 게임 ID를 가진 임시 아이템 업데이트
+        if (playersActivity && completedGame.gameId) {
+            const items = playersActivity.querySelectorAll('.activity-item');
+            items.forEach(item => {
+                try {
+                    // 데이터 속성 확인
+                    const itemData = item.dataset.gameData ? JSON.parse(item.dataset.gameData) : null;
+                    
+                    // 같은 게임 ID를 가진 아이템 찾기
+                    if (itemData && itemData.gameId === completedGame.gameId) {
+                        // 임시 클래스 제거
+                        item.classList.remove('temporary-activity');
+                        
+                        // 데이터 업데이트 (필요한 경우)
+                        itemData.temporary = false;
+                        item.dataset.gameData = JSON.stringify(itemData);
+                        
+                        // 진행 중 배지를 승리/패배 상태로 교체
+                        const tempBadge = item.querySelector('.temporary-badge');
+                        if (tempBadge) {
+                            const activityResult = item.querySelector('.activity-result');
+                            const scoreSpan = activityResult.querySelector('.activity-score');
+                            
+                            // 점수 업데이트
+                            if (scoreSpan) {
+                                scoreSpan.textContent = `${itemData.playerScore}:${itemData.bankerScore}`;
+                            }
+                            
+                            // 진행 중 배지 제거
+                            tempBadge.remove();
+                            
+                            // 승리/패배 상태 추가
+                            const statusSpan = document.createElement('span');
+                            statusSpan.className = `activity-status ${itemData.isWin ? 'win' : 'lose'}`;
+                            statusSpan.textContent = itemData.isWin ? '승리' : '패배';
+                            activityResult.appendChild(statusSpan);
+                        }
+                        
+                        // 타이틀 업데이트 - 클릭 가능함을 표시
+                        item.title = '클릭하여 카드 정보 보기';
+                        
+                        // 클릭 가능한 스타일로 변경
+                        item.style.cursor = 'pointer';
+                        item.style.pointerEvents = 'auto';
+                        item.style.opacity = '1';
+                        
+                        // 클릭 이벤트 복원
+                        item.onclick = (e) => {
+                            const detailsSection = item.querySelector('.activity-details');
+                            const isExpanded = item.dataset.expanded === 'true';
+                            
+                            if (isExpanded) {
+                                // 축소
+                                detailsSection.style.display = 'none';
+                                item.dataset.expanded = 'false';
+                            } else {
+                                // 확장 - 카드 정보 표시
+                                detailsSection.style.display = 'block';
+                                item.dataset.expanded = 'true';
+                                
+                                // 카드 표시
+                                renderActivityCards(itemData, item);
+                            }
+                        };
+                        
+                        console.log('게임 완료 처리됨:', completedGame.gameId);
+                        
+                        // 완료된 게임은 목록에서 제거
+                        removeActiveGame(completedGame.gameId);
+                    }
+                } catch (error) {
+                    console.error('아이템 업데이트 중 오류:', error);
+                }
+            });
+        }
+    });
+    
+    // 게임 상세 정보 수신
+    socket.on('game_details', (gameDetails) => {
+        console.log('게임 상세 정보 수신:', gameDetails);
+        
+        // 모달로 상세 정보 표시
+        showActivityDetailsModal(gameDetails);
+    });
+    
+    // 다른 플레이어들의 게임 기록 수신
+    socket.on('other_players_history', (history) => {
+        console.log('다른 플레이어들의 게임 기록 수신:', history.length, '개');
+        
+        // 모달이 열려 있으면 테이블에 표시
+        if (document.getElementById('all-activity-modal')) {
+            displayActivityHistory(history);
+        }
+        
+        // 활동 패널에 최신 10개만 표시
+        if (playersActivity) {
+            // 기존 내용 초기화
+            playersActivity.innerHTML = '';
+            
+            // 최대 10개까지만 표시
+            const recentHistory = history.slice(0, 10);
+            
+            // 활동 내역 추가
+            recentHistory.forEach(activity => {
+                addActivityItem(activity, false);
+            });
+            
+            // 내역이 없으면 메시지 표시
+            if (recentHistory.length === 0 && activeGames.length === 0) {
+                const noActivityMessage = document.createElement('div');
+                noActivityMessage.className = 'no-activity-message';
+                noActivityMessage.textContent = '아직 게임 기록이 없습니다';
+                playersActivity.appendChild(noActivityMessage);
+            }
+            
+            // 진행 중인 게임 표시
+            displayActiveGames();
+        }
+    });
+}
+
+// 소켓 연결 시 진행 중인 게임 표시
+function displayActiveGames() {
+    console.log('진행 중인 게임 표시:', activeGames.length, '개');
+    
+    if (activeGames.length > 0) {
+        // 현재 표시된 내용 유지하고 추가
+        activeGames.forEach(game => {
+            // 이미 DOM에 존재하는지 확인
+            const existingItem = playersActivity.querySelector(`[data-game-id="${game.gameId}"]`);
+            if (!existingItem) {
+                addActivityItem(game);
+            }
+        });
+    }
 }
 
 // 이벤트 리스너 등록
@@ -1087,16 +1618,6 @@ function setupEventListeners() {
         console.error('베팅 확정 버튼 요소를 찾을 수 없습니다.');
     }
     
-    // 채팅 전송 이벤트
-    if (sendChatBtn && chatInput) {
-        sendChatBtn.addEventListener('click', sendChatMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendChatMessage();
-            }
-        });
-    }
-    
     // 메뉴로 돌아가기 버튼
     if (backToMenuBtn) {
         backToMenuBtn.addEventListener('click', () => {
@@ -1122,23 +1643,16 @@ function setupEventListeners() {
         });
     }
     
-    // 채팅 기록 초기화 버튼
-    const clearChatBtn = document.getElementById('clear-chat-btn');
-    if (clearChatBtn) {
-        clearChatBtn.addEventListener('click', () => {
-            if (confirm('채팅 기록을 모두 삭제하시겠습니까?')) {
-                clearChatHistory();
-                console.log('채팅 기록이 삭제되었습니다.');
-            }
-        });
-    }
-    
     console.log('이벤트 리스너 설정 완료');
 }
 
 // 초기화 함수
 function init() {
-    console.log("바카라 게임 초기화 중...");
+    console.log('바카라 게임 초기화...');
+    
+    // 전역 변수 및 요소 초기화
+    selectedBet = null;
+    isGameInProgress = false;
     
     // 현재 사용자 정보 확인
     if (currentUser) {
@@ -1149,17 +1663,41 @@ function init() {
         console.log("로그인된 사용자 정보가 없습니다.");
     }
     
-    setupSocketListeners();
-    setupEventListeners();
+    // 공통 채팅 시스템 초기화
+    if (window.ChatSystem) {
+        chatSystem = new ChatSystem({
+            socket: socket,
+            chatMessages: chatMessages,
+            chatInput: chatInput,
+            sendChatBtn: sendChatBtn,
+            username: currentUser ? currentUser.username : '',
+            isAdmin: currentUser && currentUser.isAdmin,
+            onlinePlayersList: onlinePlayersList
+        });
+        
+        chatSystem.init();
+        console.log("공통 채팅 시스템 초기화 완료");
+    } else {
+        console.error("ChatSystem 클래스를 찾을 수 없습니다. 공통 채팅 모듈이 로드되었는지 확인하세요.");
+    }
+    
+    // 게임 결과 기록 불러오기
+    loadGameRecords();
+    
+    // 활동 패널 초기화
+    initActivityPanel();
     
     // 페이지 로드 시 자동으로 게임 상태 초기화
     resetGameState();
     
-    // 저장된 채팅 메시지 불러오기
-    loadChatHistory();
+    // 세션 스토리지에서 진행 중인 게임 불러오기
+    loadActiveGames();
     
-    // 저장된 게임 기록 불러오기
-    loadGameRecords();
+    // 소켓 이벤트 리스너 설정
+    setupSocketListeners();
+    
+    // 이벤트 리스너 등록
+    setupEventListeners();
     
     console.log("바카라 게임 초기화 완료");
 }
@@ -1169,84 +1707,3 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded 이벤트 발생');
     init();
 });
-
-// 로컬 스토리지에서 채팅 기록 불러오기
-function loadChatHistory() {
-    try {
-        const savedChat = localStorage.getItem(CHAT_STORAGE_KEY);
-        if (savedChat) {
-            const chatHistory = JSON.parse(savedChat);
-            
-            // 기존 채팅 비우기
-            chatMessages.innerHTML = '';
-            
-            // 저장된 채팅 표시 (시스템 메시지 제외)
-            chatHistory.filter(msg => !msg.isSystem && msg.sender !== '시스템').forEach(message => {
-                addChatMessage(message, false); // 저장 안함
-            });
-            
-            console.log(`${chatHistory.length}개의 채팅 메시지 중 시스템 메시지를 제외하고 불러왔습니다.`);
-            
-            // 스크롤을 아래로 이동
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    } catch (error) {
-        console.error('채팅 기록을 불러오는 중 오류 발생:', error);
-    }
-}
-
-// 로컬 스토리지에 채팅 저장
-function saveChatMessage(message) {
-    try {
-        // 기존 메시지 불러오기
-        let chatHistory = [];
-        const savedChat = localStorage.getItem(CHAT_STORAGE_KEY);
-        if (savedChat) {
-            chatHistory = JSON.parse(savedChat);
-        }
-        
-        // 새 메시지 추가
-        chatHistory.push(message);
-        
-        // 최대 개수 유지
-        if (chatHistory.length > STORAGE_MAX_ITEMS) {
-            chatHistory = chatHistory.slice(chatHistory.length - STORAGE_MAX_ITEMS);
-        }
-        
-        // 저장
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatHistory));
-    } catch (error) {
-        console.error('채팅 메시지 저장 중 오류 발생:', error);
-    }
-}
-
-// 로컬 스토리지에 게임 기록 저장
-function saveGameHistory(historyItem) {
-    try {
-        // 기존 게임 기록 불러오기
-        let gameHistory = [];
-        const savedHistory = localStorage.getItem(GAME_HISTORY_STORAGE_KEY);
-        if (savedHistory) {
-            gameHistory = JSON.parse(savedHistory);
-        }
-        
-        // 중복 제거 (같은 게임 ID가 있으면 업데이트)
-        const index = gameHistory.findIndex(item => item.gameId === historyItem.gameId);
-        if (index !== -1) {
-            gameHistory[index] = historyItem;
-        } else {
-            // 새 기록 추가
-            gameHistory.push(historyItem);
-        }
-        
-        // 최대 개수 유지
-        if (gameHistory.length > STORAGE_MAX_ITEMS) {
-            gameHistory = gameHistory.slice(gameHistory.length - STORAGE_MAX_ITEMS);
-        }
-        
-        // 저장
-        localStorage.setItem(GAME_HISTORY_STORAGE_KEY, JSON.stringify(gameHistory));
-    } catch (error) {
-        console.error('게임 기록 저장 중 오류 발생:', error);
-    }
-} 
