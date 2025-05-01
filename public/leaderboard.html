@@ -97,7 +97,10 @@
             window.currentUser = userString ? JSON.parse(userString) : null;
             
             if (!window.currentUser) {
-                window.location.href = '/';
+                console.error('로그인 정보가 없습니다');
+                alert('로그인이 필요합니다');
+                window.location.href = '/menu.html';
+                return;
             }
         });
     </script>

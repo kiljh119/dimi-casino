@@ -85,7 +85,7 @@ function saveUserInfo(user) {
 
 // 메인 메뉴 화면으로 이동
 function redirectToMainMenu() {
-    window.location.href = '/';
+    window.location.href = '/menu.html';
 }
 
 // 로그인 처리
@@ -154,7 +154,7 @@ function handleLogin() {
             }
             
             // 로그인 성공 후 리디렉션
-            window.location.href = 'index.html';
+            window.location.href = 'menu.html';
         } else {
             loginError.textContent = data.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.';
         }

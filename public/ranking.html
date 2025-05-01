@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>랭킹 및 게임 기록 - 카지노넷</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -20,34 +21,11 @@
             padding: 20px;
         }
         
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        
-        h1 {
-            color: #4361ee;
-            margin: 0;
-        }
-        
-        .back-btn {
-            padding: 8px 16px;
-            background-color: #4361ee;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
         .tabs {
             display: flex;
             border-bottom: 1px solid #ddd;
             margin-bottom: 20px;
+            margin-top: 30px;
         }
         
         .tab {
@@ -191,12 +169,18 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>랭킹 및 게임 기록</h1>
-            <button class="back-btn" onclick="window.location.href='/'">
-                <i class="fas fa-arrow-left"></i> 메인 메뉴로 돌아가기
-            </button>
-        </div>
+        <header>
+            <div class="game-header">
+                <div class="game-nav">
+                    <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                    <h2 style="color: #ffffff; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">랭킹 및 게임 기록</h2>
+                </div>
+                <div class="user-info">
+                    <span id="user-name"></span>
+                    <span id="user-balance"></span>
+                </div>
+            </div>
+        </header>
         
         <div class="tabs">
             <div class="tab active" id="rankings-tab">랭킹</div>
@@ -250,13 +234,16 @@
                 console.log('로그인된 사용자:', currentUser);
             } else {
                 alert('로그인이 필요합니다.');
-                window.location.href = '/';
+                window.location.href = '/menu.html';
             }
         } catch (err) {
             console.error('사용자 정보 파싱 오류:', err);
             alert('로그인 정보가 유효하지 않습니다.');
-            window.location.href = '/';
+            window.location.href = '/menu.html';
         }
+        
+        // 초기 사용자 정보 표시
+        displayUserInfo();
         
         // 탭 전환
         rankingsTab.addEventListener('click', () => {
@@ -298,12 +285,15 @@
                 // 사용자 정보 업데이트
                 currentUser = response.user;
                 
+                // 사용자 정보 표시
+                displayUserInfo();
+                
                 // 게임 데이터 요청
                 console.log('게임 데이터 요청 중...');
                 socket.emit('request_game_data');
             } else {
                 alert('로그인 실패: ' + response.message);
-                window.location.href = '/';
+                window.location.href = '/menu.html';
             }
         });
         
@@ -325,6 +315,14 @@
             console.log('랭킹 업데이트 수신:', rankings);
             displayRankings(rankings);
         });
+        
+        // 사용자 정보 표시
+        function displayUserInfo() {
+            if (currentUser) {
+                document.getElementById('user-name').textContent = currentUser.username;
+                document.getElementById('user-balance').textContent = `$${currentUser.balance.toFixed(2)}`;
+            }
+        }
         
         // 랭킹 표시
         function displayRankings(rankings) {
@@ -491,6 +489,11 @@
         
         // 초기 데이터 로드
         socket.emit('request_game_data');
+        
+        // 메뉴로 버튼 이벤트 리스너
+        document.getElementById('back-to-menu').addEventListener('click', function() {
+            window.location.href = '/menu.html';
+        });
     </script>
 </body>
 </html> 

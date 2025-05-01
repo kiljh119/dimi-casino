@@ -4,98 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>카지노넷</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="menu.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        /* 관리자 버튼 스타일 */
-        #admin-link {
-            display: none; /* 기본적으로 숨김 */
-            padding: 8px 15px;
-            background-color: #2c3e50;
-            color: white;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 600;
-            margin-right: 10px;
-        }
-        
-        #admin-link i {
-            margin-right: 5px;
-        }
-        
-        #admin-link.admin-visible {
-            display: inline-block !important;
-        }
-    </style>
+    <meta http-equiv="refresh" content="0;url=menu.html">
 </head>
 <body>
-    <div class="container">
-        <!-- 메인 메뉴 화면 -->
-        <div id="main-menu-screen" class="screen">
-            <header>
-                <div class="game-header">
-                    <div class="user-info" id="go-to-mypage">
-                        <span id="menu-user-name"></span>
-                        <span id="menu-user-balance"></span>
-                    </div>
-                    <div class="header-actions">
-                        <!-- 관리자 버튼 - 단순화된 마크업 -->
-                        <a href="admin.html" id="admin-link"><i class="fas fa-cogs"></i> 관리자 페이지</a>
-                        <button id="menu-logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
-                    </div>
-                </div>
-            </header>
-
-            <div class="menu-container">
-                <h1 class="menu-title">카지노 게임 선택</h1>
-                
-                <div class="games-grid">
-                    <div class="game-card" id="baccarat-card">
-                        <div class="game-card-image">
-                            <i class="fas fa-hand-holding-usd"></i>
-                        </div>
-                        <div class="game-card-content">
-                            <h3>바카라</h3>
-                            <p>클래식 카드 게임의 스릴을 경험해보세요</p>
-                        </div>
-                        <div class="game-card-footer">
-                            <a href="baccarat.html" class="play-btn" data-game="baccarat">플레이하기</a>
-                        </div>
-                    </div>
-                    
-                    <div class="game-card" id="chat-card">
-                        <div class="game-card-image">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <div class="game-card-content">
-                            <h3>채팅방</h3>
-                            <p>다른 플레이어와 자유롭게 대화하세요</p>
-                        </div>
-                        <div class="game-card-footer">
-                            <a href="chat.html" class="play-btn" data-game="chat">입장하기</a>
-                        </div>
-                    </div>
-                    
-                    <div class="game-card" id="ranking-card">
-                        <div class="game-card-image">
-                            <i class="fas fa-trophy"></i>
-                        </div>
-                        <div class="game-card-content">
-                            <h3>랭킹 및 게임 기록</h3>
-                            <p>전체 플레이어 랭킹과 내 게임 기록 확인</p>
-                        </div>
-                        <div class="game-card-footer">
-                            <a href="ranking.html" class="play-btn" data-game="ranking">바로가기</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="app.js"></script>
+    <p>메뉴 페이지로 이동 중입니다...</p>
+    <script>
+        window.location.href = 'menu.html';
+    </script>
 </body>
 </html>

@@ -17,7 +17,7 @@
                 <div class="game-header">
                     <div class="game-nav">
                         <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
-                        <h2>바카라</h2>
+                        <h2 style="color: #ffffff; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">바카라</h2>
                     </div>
                     <div class="user-info">
                         <span id="user-name"></span>
@@ -109,14 +109,14 @@
             
             if (!storedUser || !storedUser.username) {
                 console.error('로그인 정보가 없습니다. 메인 페이지로 이동합니다.');
-                window.location.href = '/';
+                window.location.href = '/menu.html';
             }
             
             // 사용자 정보를 전역 변수로 저장
             window.currentUser = storedUser;
         } catch (e) {
             console.error('저장된 사용자 정보 파싱 오류:', e);
-            window.location.href = '/';
+            window.location.href = '/menu.html';
         }
         
         // 소켓 초기화 함수

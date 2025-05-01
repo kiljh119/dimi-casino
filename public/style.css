@@ -1611,7 +1611,9 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
-  font-weight: 500;
+  font-weight: 800;
+  font-family: 'Noto Sans KR', sans-serif;
+  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
   gap: 6px;

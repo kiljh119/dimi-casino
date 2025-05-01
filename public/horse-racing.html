@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경마 게임 - 카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 경마 게임 스타일 */
+        .horse-racing-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #e0e0e0;
+        }
+        
+        .game-info-panel {
+            display: flex;
+            justify-content: space-between;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #fff;
+            align-items: center;
+        }
+        
+        .next-race-time {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #f9d71c;
+        }
+        
+        .race-status {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .betting-phase {
+            color: #3bc9db;
+        }
+        
+        .racing-phase {
+            color: #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+        
+        .race-track {
+            background-color: #1a2a3a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            height: 400px;
+        }
+        
+        .race-lane {
+            height: 42px;
+            margin-bottom: 6px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            overflow: hidden;
+        }
+        
+        .lane-number {
+            position: absolute;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: bold;
+            z-index: 1;
+            font-size: 0.9rem;
+        }
+        
+        .horse {
+            position: absolute;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            transition: left 0.3s ease-in-out;
+            z-index: 2;
+            color: white; /* 말 텍스트 색상 */
+            background-color: rgba(0, 0, 0, 0.3); /* 말 배경색 추가 */
+            padding: 5px 10px;
+            border-radius: 5px;
+            min-width: 80px; /* 최소 너비 설정 */
+        }
+        
+        .horse-icon {
+            font-size: 24px;
+            margin-right: 8px;
+            color: #fff;
+        }
+        
+        .horse-name {
+            font-size: 0.9rem;
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .finish-line {
+            position: absolute;
+            right: 30px;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #fff 0,
+                #fff 10px,
+                #000 10px,
+                #000 20px
+            );
+            z-index: 1;
+        }
+        
+        .race-result {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #fff;
+            display: none;
+        }
+        
+        .result-title {
+            color: #f9d71c;
+            font-size: 1.4rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .result-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .result-rank {
+            font-weight: bold;
+            width: 30px;
+            color: #f9d71c;
+        }
+        
+        .result-name {
+            flex: 1;
+        }
+        
+        .result-time {
+            margin-right: 15px;
+            color: #3bc9db;
+        }
+        
+        .betting-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .betting-form, .bet-types {
+            flex: 1;
+            min-width: 300px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            color: #fff;
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #f9d71c;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+        }
+        
+        .horse-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .horse-option {
+            padding: 8px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .horse-option:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .horse-option.selected {
+            background-color: var(--primary-color);
+        }
+        
+        .horse-option-name {
+            font-size: 0.9rem;
+        }
+        
+        .horse-option-odds {
+            font-size: 0.8rem;
+            color: #f9d71c;
+            font-weight: bold;
+        }
+        
+        .bet-type-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .bet-type {
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .bet-type:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .bet-type.selected {
+            background-color: var(--primary-color);
+        }
+        
+        .bet-type-name {
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+        
+        .bet-type-desc {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .bet-amount-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .bet-amount-input input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+        }
+        
+        .bet-amount-input input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .quick-amount-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .amount-btn {
+            flex: 1;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .amount-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .place-bet-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .place-bet-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .place-bet-btn:disabled {
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+        }
+        
+        .bet-info {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .bet-info-text {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .bet-info-value {
+            font-weight: bold;
+            color: #f9d71c;
+        }
+        
+        .current-bets {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        
+        .bets-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .bet-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .bet-item:last-child {
+            border-bottom: none;
+        }
+        
+        .bet-detail {
+            flex: 1;
+        }
+        
+        .bet-detail-type {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .bet-amount {
+            font-weight: bold;
+            color: #f9d71c;
+        }
+        
+        .bet-potential-win {
+            color: #3bc9db;
+            font-size: 0.9rem;
+        }
+        
+        /* 애니메이션 */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes winner {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes horseRun {
+            0% { transform: translateX(0) scaleX(1); }
+            25% { transform: translateX(5px) scaleX(0.95); }
+            50% { transform: translateX(0) scaleX(1); }
+            75% { transform: translateX(-5px) scaleX(0.95); }
+            100% { transform: translateX(0) scaleX(1); }
+        }
+        
+        .horse-icon {
+            animation: horseRun 0.5s infinite;
+        }
+        
+        /* 반응형 레이아웃 */
+        @media (max-width: 768px) {
+            .betting-panel {
+                flex-direction: column;
+            }
+            
+            .horse-list {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .bet-type-options {
+                flex-direction: column;
+            }
+            
+            .bet-type {
+                min-width: 100%;
+            }
+        }
+
+        /* 디버그용 스타일 */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            max-width: 300px;
+            max-height: 200px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="game-header">
+                <div class="game-nav">
+                    <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                    <h2 style="color: #ffffff; font-weight: bold; font-size: 24px; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">경마 게임</h2>
+                </div>
+                <div class="user-info">
+                    <span id="user-name"></span>
+                    <span id="user-balance"></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="horse-racing-container">
+            <div class="game-info-panel">
+                <div class="race-status">
+                    <span id="race-status-text" class="betting-phase">베팅 진행 중</span>
+                </div>
+                <div class="next-race-time">
+                    다음 경기 시작까지: <span id="time-remaining">00:00</span>
+                </div>
+            </div>
+            
+            <div class="race-track">
+                <div class="finish-line"></div>
+                <!-- 트랙 레인은 자바스크립트로 생성됨 -->
+            </div>
+            
+            <div class="race-result" id="race-result-panel">
+                <h3 class="result-title">경기 결과</h3>
+                <ul class="result-list" id="result-list">
+                    <!-- 결과는 자바스크립트로 생성됨 -->
+                </ul>
+            </div>
+            
+            <div class="betting-panel">
+                <div class="betting-form">
+                    <h3 class="panel-title">베팅하기</h3>
+                    
+                    <div class="horse-list" id="horse-list">
+                        <!-- 말 목록은 자바스크립트로 생성됨 -->
+                    </div>
+                    
+                    <div class="bet-amount-input">
+                        <input type="number" id="bet-amount" placeholder="베팅 금액 입력" min="100">
+                    </div>
+                    
+                    <div class="quick-amount-buttons">
+                        <button class="amount-btn" data-amount="100">100</button>
+                        <button class="amount-btn" data-amount="500">500</button>
+                        <button class="amount-btn" data-amount="1000">1,000</button>
+                        <button class="amount-btn" data-amount="5000">5,000</button>
+                    </div>
+                    
+                    <div class="bet-info">
+                        <p class="bet-info-text">
+                            선택: <span id="selected-horse-text" class="bet-info-value">선택 없음</span>
+                        </p>
+                        <p class="bet-info-text">
+                            베팅 유형: <span id="selected-bet-type-text" class="bet-info-value">선택 없음</span>
+                        </p>
+                        <p class="bet-info-text">
+                            배당률: <span id="selected-odds-text" class="bet-info-value">-</span>
+                        </p>
+                        <p class="bet-info-text">
+                            예상 수익금: <span id="potential-win-text" class="bet-info-value">0원</span>
+                        </p>
+                    </div>
+                    
+                    <button id="place-bet-btn" class="place-bet-btn" disabled>베팅 확정</button>
+                </div>
+                
+                <div class="bet-types">
+                    <h3 class="panel-title">베팅 유형</h3>
+                    
+                    <div class="bet-type-options">
+                        <div class="bet-type" data-type="single">
+                            <div class="bet-type-name">단승</div>
+                            <div class="bet-type-desc">1등 맞히기</div>
+                        </div>
+                        <div class="bet-type" data-type="place">
+                            <div class="bet-type-name">복승</div>
+                            <div class="bet-type-desc">1,2등 순서 무관</div>
+                        </div>
+                        <div class="bet-type" data-type="quinella">
+                            <div class="bet-type-name">쌍승</div>
+                            <div class="bet-type-desc">1,2등 정확한 순서</div>
+                        </div>
+                        <div class="bet-type" data-type="trifecta-place">
+                            <div class="bet-type-name">삼복승</div>
+                            <div class="bet-type-desc">1~3등 순서 무관</div>
+                        </div>
+                        <div class="bet-type" data-type="trifecta">
+                            <div class="bet-type-name">삼쌍승</div>
+                            <div class="bet-type-desc">1~3등 정확한 순서</div>
+                        </div>
+                    </div>
+                    
+                    <div id="multi-selections" class="horse-list" style="display: none;">
+                        <!-- 멀티 선택 말 목록 (쌍승, 삼복승 등에서 사용) -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="current-bets" id="current-bets-panel">
+                <h3 class="panel-title">내 베팅 내역</h3>
+                <ul class="bets-list" id="bets-list">
+                    <!-- 베팅 내역은 자바스크립트로 생성됨 -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 디버그 정보 표시 -->
+    <div class="debug-info" id="debug-info"></div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 소켓 연결 에러 대비용 가상 소켓 생성
+        window.io = window.io || function() {
+            console.log('소켓 라이브러리 로드 실패. 가상 소켓 생성');
+            return {
+                on: function(event, callback) {
+                    console.log('가상 소켓 이벤트 등록:', event);
+                    return this;
+                },
+                emit: function(event, data) {
+                    console.log('가상 소켓 이벤트 발생:', event, data);
+                    return this;
+                },
+                connected: false
+            };
+        };
+    </script>
+    <script src="js/horse-racing.js"></script>
+    <script>
+        // 디버그 정보 표시
+        const debugInfo = document.getElementById('debug-info');
+        
+        // 콘솔 로그 오버라이드
+        const originalConsoleLog = console.log;
+        console.log = function() {
+            originalConsoleLog.apply(console, arguments);
+            const args = Array.from(arguments);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : arg
+            ).join(' ');
+            
+            const logLine = document.createElement('div');
+            logLine.textContent = message;
+            debugInfo.appendChild(logLine);
+            
+            // 최대 20개 로그만 유지
+            if (debugInfo.children.length > 20) {
+                debugInfo.removeChild(debugInfo.children[0]);
+            }
+            
+            // 자동 스크롤
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        };
+    </script>
+</body>
+</html> 

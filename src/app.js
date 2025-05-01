@@ -3,6 +3,7 @@ const { db, initializeDatabase } = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const gameRoutes = require('./routes/gameRoutes');
 const { setupGameSocket } = require('./socket/gameHandler');
+const { setupHorseRacingSocket } = require('./socket/horseRacingHandler');
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
@@ -41,6 +42,7 @@ app.use('/api', gameRoutes);
 
 // 소켓 설정
 setupGameSocket(io);
+setupHorseRacingSocket(io);
 
 // 포트가 사용 가능한지 확인하는 함수
 function isPortAvailable(port) {
