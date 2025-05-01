@@ -1,4 +1,4 @@
-const { db } = require('../config/database');
+const { supabase } = require('../config/database');
 const bcrypt = require('bcrypt');
 
 class User {
@@ -10,259 +10,288 @@ class User {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        db.run(
-          'INSERT INTO users (username, password) VALUES (?, ?)',
-          [username, hashedPassword],
-          function (err) {
-            if (err) return reject(err);
-            resolve(this.lastID);
-          }
-        );
+        // Supabase에 사용자 삽입
+        const { data, error } = await supabase
+          .from('users')
+          .insert([
+            { username, password: hashedPassword }
+          ])
+          .select();
+        
+        if (error) throw error;
+        
+        resolve(data[0].id);
       } catch (error) {
         reject(error);
       }
     });
   }
 
-  // 사용자명으로 찾기
-  static findByUsername(username) {
-    return new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM users WHERE username = ?',
-        [username],
-        (err, user) => {
-          if (err) return reject(err);
-          resolve(user);
+  // 로그인 처리
+  static async login(username, password) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 사용자 검색
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username)
+          .limit(1);
+        
+        if (error) throw error;
+        
+        const user = users[0];
+        
+        if (!user) {
+          return resolve(null);
         }
-      );
+        
+        // 비밀번호 검증
+        const isValid = await bcrypt.compare(password, user.password);
+        
+        if (isValid) {
+          resolve(user);
+        } else {
+          resolve(null);
+        }
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
   // 아이디로 찾기
-  static findById(id) {
-    return new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM users WHERE id = ?',
-        [id],
-        (err, user) => {
-          if (err) return reject(err);
-          resolve(user);
+  static async findById(id) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', id)
+          .limit(1)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // Record Not Found 에러가 아닌 경우에만 예외 처리
+          throw error;
         }
-      );
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
-  // 잔액 업데이트
-  static updateBalance(userId, amount, isWin) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE users SET 
-         balance = balance ${isWin ? '+' : '-'} ?, 
-         ${isWin ? 'wins = wins + 1' : 'losses = losses + 1'}, 
-         profit = profit ${isWin ? '+' : '-'} ? 
-         WHERE id = ?`,
-        [amount, amount, userId],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.changes);
+  // 사용자 이름으로 찾기
+  static async findByUsername(username) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username)
+          .limit(1)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // Record Not Found 에러가 아닌 경우에만 예외 처리
+          throw error;
         }
-      );
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
-  // 상위 랭킹 가져오기
-  static getTopRankings(limit = 10) {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, username, balance, profit, wins, losses,
-         (wins + losses) as total_games,
-         CASE WHEN (wins + losses) > 0 THEN (wins * 100.0 / (wins + losses)) ELSE 0 END as win_rate
-         FROM users
-         ORDER BY balance DESC
-         LIMIT ?`,
-        [limit],
-        (err, rankings) => {
-          if (err) return reject(err);
-          
-          const formattedRankings = rankings.map(user => ({
-            id: user.id,
-            username: user.username,
-            balance: user.balance || 0,
-            profit: user.profit || 0,
-            wins: user.wins || 0,
-            losses: user.losses || 0,
-            totalGames: user.total_games || 0,
-            winRate: (user.wins && user.total_games) ? (user.wins / user.total_games) : 0
-          }));
-          
-          resolve(formattedRankings);
-        }
-      );
+  // 모든 사용자 가져오기
+  static async findAll() {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
-  
-  // 관리자용 - 모든 사용자 조회
-  static getAllUsers() {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, username, balance, wins, losses, profit, 
-        CASE WHEN (wins + losses) > 0 THEN (wins * 100.0 / (wins + losses)) ELSE 0 END as win_rate,
-        datetime(created_at, 'localtime') as created_at
-        FROM users
-        ORDER BY username`,
-        [],
-        (err, users) => {
-          if (err) return reject(err);
-          resolve(users);
+
+  // 잔액 업데이트 및 승패 기록
+  static async updateBalance(userId, amount, isWin, isTransaction = false) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 현재 사용자 데이터 가져오기
+        const { data: user, error: selectError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (selectError) throw selectError;
+        
+        // 잔액 계산
+        let newBalance = 0;
+        let newWins = user.wins;
+        let newLosses = user.losses;
+        let newProfit = user.profit;
+        
+        if (isWin) {
+          newBalance = user.balance + amount;
+          newWins += 1;
+          newProfit += amount;
+        } else {
+          newBalance = user.balance - amount;
+          newLosses += 1;
+          newProfit -= amount;
         }
-      );
+        
+        // 잔액 및 통계 업데이트
+        const { data, error: updateError } = await supabase
+          .from('users')
+          .update({
+            balance: newBalance,
+            wins: newWins,
+            losses: newLosses,
+            profit: newProfit
+          })
+          .eq('id', userId)
+          .select();
+        
+        if (updateError) throw updateError;
+        
+        resolve(data[0]);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
-  
-  // 관리자용 - 사용자 검색
-  static searchUsers(query) {
-    return new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, username, balance, wins, losses, profit, 
-        CASE WHEN (wins + losses) > 0 THEN (wins * 100.0 / (wins + losses)) ELSE 0 END as win_rate,
-        datetime(created_at, 'localtime') as created_at
-        FROM users
-        WHERE username LIKE ?
-        ORDER BY username`,
-        [`%${query}%`],
-        (err, users) => {
-          if (err) return reject(err);
-          resolve(users);
-        }
-      );
-    });
-  }
-  
-  // 관리자용 - 잔액 증가
-  static addBalance(userId, amount) {
-    return new Promise((resolve, reject) => {
-      db.run(
-        `UPDATE users SET balance = balance + ? WHERE id = ?`,
-        [amount, userId],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.changes);
-        }
-      );
+
+  // 잔액 추가 (관리자용)
+  static async addBalance(userId, amount) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 잔액 업데이트
+        const { data, error } = await supabase
+          .from('users')
+          .update({ balance: supabase.raw(`balance + ${amount}`) })
+          .eq('id', userId)
+          .select();
+        
+        if (error) throw error;
+        
+        resolve({ changes: 1, newBalance: data[0].balance });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
   
   // 관리자용 - 잔액 감소
-  static subtractBalance(userId, amount) {
-    return new Promise((resolve, reject) => {
-      // 먼저 현재 잔액을 확인하여 마이너스가 되지 않도록 함
-      db.get(
-        'SELECT balance FROM users WHERE id = ?',
-        [userId],
-        (err, user) => {
-          if (err) return reject(err);
-          if (!user) return reject(new Error('사용자를 찾을 수 없습니다.'));
-          
-          // 차감할 금액이 현재 잔액보다 많으면 현재 잔액만큼만 차감
-          const deductAmount = Math.min(amount, user.balance);
-          
-          db.run(
-            `UPDATE users SET balance = balance - ? WHERE id = ?`,
-            [deductAmount, userId],
-            function (err) {
-              if (err) return reject(err);
-              resolve({ 
-                changes: this.changes, 
-                deductedAmount: deductAmount,
-                newBalance: user.balance - deductAmount 
-              });
-            }
-          );
-        }
-      );
+  static async subtractBalance(userId, amount) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 먼저 현재 잔액을 확인하여 마이너스가 되지 않도록 함
+        const { data: user, error: selectError } = await supabase
+          .from('users')
+          .select('balance')
+          .eq('id', userId)
+          .single();
+        
+        if (selectError) throw selectError;
+        if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+        
+        // 차감할 금액이 현재 잔액보다 많으면 현재 잔액만큼만 차감
+        const deductAmount = Math.min(amount, user.balance);
+        
+        // 잔액 업데이트
+        const { data, error: updateError } = await supabase
+          .from('users')
+          .update({ balance: user.balance - deductAmount })
+          .eq('id', userId)
+          .select();
+        
+        if (updateError) throw updateError;
+        
+        resolve({
+          changes: 1,
+          deductedAmount: deductAmount,
+          newBalance: data[0].balance
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
   
   // 관리자용 - 계정 삭제
-  static deleteUser(userId) {
-    return new Promise((resolve, reject) => {
-      // 트랜잭션 시작
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
+  static async deleteUser(userId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 관리자 계정은 삭제 불가
+        const { data: user, error: selectError } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', userId)
+          .single();
         
-        try {
-          // 관리자 계정은 삭제 불가
-          db.get(
-            'SELECT username FROM users WHERE id = ?',
-            [userId],
-            (err, user) => {
-              if (err) {
-                db.run('ROLLBACK');
-                return reject(err);
-              }
-              
-              if (!user) {
-                db.run('ROLLBACK');
-                return reject(new Error('사용자를 찾을 수 없습니다.'));
-              }
-              
-              if (user.username === 'admin') {
-                db.run('ROLLBACK');
-                return reject(new Error('관리자 계정은 삭제할 수 없습니다.'));
-              }
-              
-              // 사용자의 게임 히스토리 삭제
-              db.run(
-                'DELETE FROM game_history WHERE user_id = ?',
-                [userId],
-                (err) => {
-                  if (err) {
-                    db.run('ROLLBACK');
-                    return reject(err);
-                  }
-                  
-                  // 사용자 계정 삭제
-                  db.run(
-                    'DELETE FROM users WHERE id = ?',
-                    [userId],
-                    function (err) {
-                      if (err) {
-                        db.run('ROLLBACK');
-                        return reject(err);
-                      }
-                      
-                      db.run('COMMIT');
-                      resolve({
-                        success: true,
-                        message: '계정이 성공적으로 삭제되었습니다.',
-                        changes: this.changes
-                      });
-                    }
-                  );
-                }
-              );
-            }
-          );
-        } catch (error) {
-          db.run('ROLLBACK');
-          reject(error);
+        if (selectError) throw selectError;
+        if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+        
+        if (user.username === 'admin') {
+          throw new Error('관리자 계정은 삭제할 수 없습니다.');
         }
-      });
+        
+        // 사용자의 게임 히스토리 삭제
+        const { error: gameHistoryError } = await supabase
+          .from('game_history')
+          .delete()
+          .eq('user_id', userId);
+        
+        if (gameHistoryError) throw gameHistoryError;
+        
+        // 사용자 계정 삭제
+        const { error: deleteError } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', userId);
+        
+        if (deleteError) throw deleteError;
+        
+        resolve({
+          success: true,
+          message: '계정이 성공적으로 삭제되었습니다.',
+          changes: 1
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
   // 관리자 계정 확인 메서드 추가
   static isAdmin(userId) {
     return new Promise((resolve, reject) => {
-      db.get(
-        'SELECT is_admin FROM users WHERE id = ?',
-        [userId],
-        (err, user) => {
-          if (err) return reject(err);
-          if (!user) return resolve(false);
-          resolve(user.is_admin === 1);
-        }
-      );
+      supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', userId)
+        .single()
+        .then(data => {
+          if (data.is_admin === 1) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        })
+        .catch(error => {
+          reject(error);
+        });
     });
   }
 
@@ -280,18 +309,21 @@ class User {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
         
-        db.run(
-          'UPDATE users SET password = ? WHERE id = ? AND is_admin = 1',
-          [hashedPassword, adminId],
-          function (err) {
-            if (err) return reject(err);
+        supabase
+          .from('users')
+          .update({ password: hashedPassword })
+          .eq('id', adminId)
+          .eq('is_admin', 1)
+          .then(data => {
             resolve({
               success: true,
               message: '관리자 비밀번호가 변경되었습니다.',
-              changes: this.changes
+              changes: data.length
             });
-          }
-        );
+          })
+          .catch(error => {
+            reject(error);
+          });
       } catch (error) {
         reject(error);
       }
@@ -306,20 +338,54 @@ class User {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
         
-        db.run(
-          'UPDATE users SET password = ? WHERE id = ?',
-          [hashedPassword, userId],
-          function(err) {
-            if (err) return reject(err);
+        supabase
+          .from('users')
+          .update({ password: hashedPassword })
+          .eq('id', userId)
+          .then(data => {
             resolve({
               success: true,
               message: '비밀번호가 변경되었습니다.',
-              changes: this.changes
+              changes: data.length
             });
-          }
-        );
+          })
+          .catch(error => {
+            reject(error);
+          });
       } catch (error) {
         reject(error);
+      }
+    });
+  }
+
+  // Top 랭킹 가져오기
+  static async getTopRankings(limit = 10) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Supabase를 사용해서 랭킹 정보 가져오기
+        const { data, error } = await supabase
+          .from('users')
+          .select('username, balance, wins, losses, profit')
+          .order('profit', { ascending: false })
+          .limit(limit);
+        
+        if (error) throw error;
+        
+        // 랭킹 정보 포맷팅
+        const rankings = data.map((user, index) => ({
+          rank: index + 1,
+          username: user.username,
+          balance: user.balance,
+          wins: user.wins,
+          losses: user.losses,
+          profit: user.profit
+        }));
+        
+        resolve(rankings);
+      } catch (error) {
+        console.error('랭킹 정보 조회 오류:', error);
+        // 오류 발생 시 빈 배열 반환
+        resolve([]);
       }
     });
   }

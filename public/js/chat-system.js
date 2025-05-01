@@ -68,9 +68,29 @@ class ChatSystem {
 
   // 채팅 전송
   sendChatMessage() {
-    const messageText = this.chatInput.value.trim();
+    let messageText = this.chatInput.value.trim();
     
     if (!messageText) return;
+    
+    // XSS 공격 패턴 검사
+    const xssPatterns = [
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, // <script> 태그
+      /<img[^>]+\bonerror\b[^>]*>/gi, // onerror 속성을 가진 이미지 태그
+      /<iframe[^>]*>/gi, // iframe 태그
+      /<a[^>]*\bhref\s*=\s*["']?(javascript:|data:)[^>]*>/gi, // 자바스크립트 프로토콜이나 데이터 URI를 사용하는 링크
+      /on\w+\s*=\s*["']?[^"'>]*["']?/gi, // 모든 on* 이벤트 핸들러 (onclick, onload 등)
+    ];
+    
+    // XSS 패턴이 발견되면 알림 표시 및 메시지 필터링
+    const hasXssPattern = xssPatterns.some(pattern => pattern.test(messageText));
+    
+    if (hasXssPattern) {
+      console.warn('잠재적인 XSS 공격 시도가 감지되었습니다.');
+      this.addSystemMessage('보안상의 이유로 특정 HTML 태그와 스크립트는 사용할 수 없습니다.');
+      
+      // 악성 코드 필터링 (모든 HTML 태그와 이벤트 핸들러 제거)
+      messageText = this.escapeHtml(messageText);
+    }
     
     const message = {
       sender: this.username,
@@ -129,26 +149,40 @@ class ChatSystem {
       messageElement.classList.add('my-message');
     }
     
+    // 메시지 정보 컨테이너 생성
+    const messageInfo = document.createElement('div');
+    messageInfo.className = 'message-info';
+    
     // 관리자 메시지 구분
     if (message.isAdmin) {
       messageElement.classList.add('admin-message');
-      messageElement.innerHTML = `
-        <div class="message-info">
-            <span class="admin-badge">관리자</span>
-            <span class="message-sender">${safeUsername}</span>
-            <span class="message-time">${time}</span>
-        </div>
-        <div class="message-text">${safeText}</div>
-      `;
-    } else {
-      messageElement.innerHTML = `
-        <div class="message-info">
-            <span class="message-sender">${safeUsername}</span>
-            <span class="message-time">${time}</span>
-        </div>
-        <div class="message-text">${safeText}</div>
-      `;
+      
+      const adminBadge = document.createElement('span');
+      adminBadge.className = 'admin-badge';
+      adminBadge.textContent = '관리자';
+      messageInfo.appendChild(adminBadge);
     }
+    
+    // 발신자 이름 추가
+    const senderElement = document.createElement('span');
+    senderElement.className = 'message-sender';
+    senderElement.textContent = safeUsername;
+    messageInfo.appendChild(senderElement);
+    
+    // 메시지 시간 추가
+    const timeElement = document.createElement('span');
+    timeElement.className = 'message-time';
+    timeElement.textContent = time;
+    messageInfo.appendChild(timeElement);
+    
+    // 메시지 텍스트 컨테이너 생성
+    const messageText = document.createElement('div');
+    messageText.className = 'message-text';
+    messageText.textContent = safeText; // textContent는 자동으로 HTML을 이스케이프함
+    
+    // 모든 요소 추가
+    messageElement.appendChild(messageInfo);
+    messageElement.appendChild(messageText);
     
     this.chatMessages.appendChild(messageElement);
     
@@ -163,13 +197,15 @@ class ChatSystem {
       return '';
     }
     
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-      .replace(/`/g, '&#96;');
+    // DOMPurify를 사용하여 안전하게 정화 (외부 주입 공격 방지)
+    if (window.DOMPurify) {
+      return DOMPurify.sanitize(text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    }
+    
+    // DOMPurify가 로드되지 않은 경우 대체 메서드
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   // 시스템 메시지 표시
@@ -182,16 +218,30 @@ class ChatSystem {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const timeString = `${hours}:${minutes}`;
     
-    // 시스템 메시지도 안전하게 처리
-    const safeText = this.escapeHtml(text);
+    // 메시지 정보 컨테이너 생성
+    const messageInfo = document.createElement('div');
+    messageInfo.className = 'message-info';
     
-    messageElement.innerHTML = `
-      <div class="message-info">
-          <span class="message-sender">시스템</span>
-          <span class="message-time">${timeString}</span>
-      </div>
-      <div class="message-text">${safeText}</div>
-    `;
+    // 발신자(시스템) 추가
+    const senderElement = document.createElement('span');
+    senderElement.className = 'message-sender';
+    senderElement.textContent = '시스템';
+    messageInfo.appendChild(senderElement);
+    
+    // 메시지 시간 추가
+    const timeElement = document.createElement('span');
+    timeElement.className = 'message-time';
+    timeElement.textContent = timeString;
+    messageInfo.appendChild(timeElement);
+    
+    // 메시지 텍스트 컨테이너 생성
+    const messageText = document.createElement('div');
+    messageText.className = 'message-text';
+    messageText.textContent = text; // textContent는 자동으로 HTML을 이스케이프함
+    
+    // 모든 요소 추가
+    messageElement.appendChild(messageInfo);
+    messageElement.appendChild(messageText);
     
     this.chatMessages.appendChild(messageElement);
     this.scrollToBottom();
@@ -209,6 +259,9 @@ class ChatSystem {
     this.onlinePlayersList.innerHTML = '';
     
     players.forEach(player => {
+      // XSS 방지를 위해 플레이어 이름 이스케이프
+      const safePlayerName = this.escapeHtml(player);
+      
       const li = document.createElement('li');
       li.className = 'online-player';
       
@@ -219,15 +272,35 @@ class ChatSystem {
       
       // 관리자 표시
       if (player === this.username && this.isAdmin) {
-        li.innerHTML = `<i class="fas fa-shield-alt"></i> ${player} <span class="admin-tag">관리자</span>`;
+        // 아이콘 생성
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-shield-alt';
+        li.appendChild(icon);
+        
+        // 공백 추가
+        li.appendChild(document.createTextNode(' '));
+        
+        // 사용자 이름 추가
+        li.appendChild(document.createTextNode(safePlayerName));
+        
+        // 공백 추가
+        li.appendChild(document.createTextNode(' '));
+        
+        // 관리자 태그 추가
+        const adminTag = document.createElement('span');
+        adminTag.className = 'admin-tag';
+        adminTag.textContent = '관리자';
+        li.appendChild(adminTag);
+        
         li.classList.add('admin-player');
       } else {
-        // 온라인 표시기와 함께 유저명 출력
+        // 온라인 표시기 생성
         const onlineIndicator = document.createElement('span');
         onlineIndicator.className = 'online-indicator';
-        
         li.appendChild(onlineIndicator);
-        li.appendChild(document.createTextNode(player));
+        
+        // 사용자 이름 추가
+        li.appendChild(document.createTextNode(safePlayerName));
       }
       
       this.onlinePlayersList.appendChild(li);
