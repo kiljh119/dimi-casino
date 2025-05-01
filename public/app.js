@@ -27,6 +27,24 @@ function handleLogout() {
     window.location.href = 'login.html';
 }
 
+// 사용자 정보 화면에 표시
+function displayUserInfo(user) {
+    const userNameElement = document.getElementById('menu-user-name');
+    const userBalanceElement = document.getElementById('menu-user-balance');
+    
+    if (userNameElement && user) {
+        userNameElement.textContent = user.username;
+    }
+    
+    if (userBalanceElement && user) {
+        if (!user.isAdmin) {
+            userBalanceElement.textContent = `$${user.balance.toFixed(2)}`;
+        } else {
+            userBalanceElement.textContent = '관리자';
+        }
+    }
+}
+
 // 앱 초기화
 document.addEventListener('DOMContentLoaded', () => {
     // 로그인 상태 확인
@@ -38,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'login.html';
         return;
     }
+    
+    // 사용자 정보 화면에 표시
+    displayUserInfo(user);
     
     // 소켓 이벤트 설정
     setupSocketListeners();
@@ -74,5 +95,26 @@ function setupSocketListeners() {
         
         // 로그아웃 처리
         handleLogout();
+    });
+    
+    // 잔액 업데이트 이벤트 처리
+    socket.on('balance_update', (data) => {
+        // 현재 사용자의 잔액 업데이트
+        const user = getUserInfo();
+        if (user && user.username === data.username) {
+            user.balance = data.balance;
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+            
+            // 화면 업데이트
+            const userBalanceElement = document.getElementById('menu-user-balance');
+            if (userBalanceElement) {
+                userBalanceElement.textContent = `$${data.balance.toFixed(2)}`;
+            }
+            
+            // 전역 객체 업데이트
+            if (window.app && window.app.currentUser) {
+                window.app.currentUser.balance = data.balance;
+            }
+        }
     });
 }

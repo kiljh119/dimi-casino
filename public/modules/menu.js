@@ -19,6 +19,11 @@ function showMainMenuScreen() {
     mainMenuScreen.classList.remove('hidden');
     
     // 사용자 정보 업데이트
+    updateUserInfo();
+}
+
+// 사용자 정보 업데이트 함수
+function updateUserInfo() {
     const currentUser = window.app?.currentUser;
     if (currentUser) {
         document.getElementById('menu-user-name').textContent = currentUser.username;
@@ -27,6 +32,17 @@ function showMainMenuScreen() {
         } else {
             document.getElementById('menu-user-balance').textContent = '관리자';
         }
+    }
+}
+
+// 서버에서 최신 사용자 정보 요청
+function requestUserUpdate(socket) {
+    if (!socket) return;
+    
+    const currentUser = window.app?.currentUser;
+    if (currentUser && !currentUser.isAdmin) {
+        console.log('서버에 사용자 정보 업데이트 요청:', currentUser.username);
+        socket.emit('request_user_info', { username: currentUser.username });
     }
 }
 
@@ -107,6 +123,25 @@ export function initMenu(socket) {
             document.getElementById('menu-total-online').textContent = `${players.length}명 접속 중`;
         }
     });
+    
+    // 사용자 정보 업데이트 이벤트 처리
+    socket.on('user_info_update', (userData) => {
+        console.log('사용자 정보 업데이트 수신:', userData);
+        
+        if (window.app?.currentUser && userData.username === window.app.currentUser.username) {
+            // 전역 사용자 정보 업데이트
+            window.app.currentUser.balance = userData.balance;
+            
+            // 화면 업데이트
+            updateUserInfo();
+            
+            // 로컬 스토리지 업데이트
+            localStorage.setItem('user', JSON.stringify(window.app.currentUser));
+        }
+    });
+    
+    // 페이지 로드 시 사용자 정보 요청
+    requestUserUpdate(socket);
     
     // 접근성을 위한 전역 노출
     window.showAdminScreen = showAdminScreen;

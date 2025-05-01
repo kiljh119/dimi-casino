@@ -120,6 +120,38 @@ function setupGameSocket(io) {
       }
     });
     
+    // 사용자 정보 요청 처리
+    socket.on('request_user_info', async (data) => {
+      console.log('사용자 정보 요청:', data);
+      
+      if (!data || !data.username) {
+        console.error('잘못된 요청 형식:', data);
+        return;
+      }
+      
+      try {
+        // 데이터베이스에서 최신 사용자 정보 조회
+        const user = await User.findByUsername(data.username);
+        
+        if (!user) {
+          console.error('요청한 사용자를 찾을 수 없습니다:', data.username);
+          return;
+        }
+        
+        // 사용자 정보 전송
+        socket.emit('user_info_update', {
+          username: user.username,
+          balance: user.balance,
+          wins: user.wins,
+          losses: user.losses
+        });
+        
+        console.log('사용자 정보 전송 완료:', user.username);
+      } catch (error) {
+        console.error('사용자 정보 요청 처리 오류:', error);
+      }
+    });
+    
     // 베팅 시작
     socket.on('place_bet', async (betData) => {
       console.log('베팅 시도:', socket.username, betData);
