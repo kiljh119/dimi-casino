@@ -523,14 +523,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!token || !user) {
         // 로그인되어 있지 않으면 로그인 페이지로 리디렉션
+        console.error('로그인이 필요합니다: 토큰 또는 사용자 정보 없음');
         window.location.href = 'login.html';
         return;
     }
     
-    // 관리자 권한 확인
-    const isAdminUser = user && (user.isAdmin === true || user.is_admin === 1 || user.is_admin === true || user.username.toLowerCase() === 'admin');
+    // 디버깅: 로그인 사용자 정보 출력
+    console.log('로그인 사용자 정보:', user);
+    
+    // 관리자 권한 확인 (다음 중 하나라도 해당되면 관리자로 간주)
+    const isAdminUsername = user.username && user.username.toLowerCase() === 'admin';
+    const hasAdminFlag = user.isAdmin === true;
+    const hasIsAdminFlag = user.is_admin === true || user.is_admin === 1;
+    
+    const isAdminUser = isAdminUsername || hasAdminFlag || hasIsAdminFlag;
+    
+    console.log('관리자 권한 확인 결과:', {
+        '사용자명': user.username,
+        'admin 사용자명 여부': isAdminUsername,
+        'isAdmin 속성': hasAdminFlag,
+        'is_admin 속성': hasIsAdminFlag,
+        '최종 관리자 여부': isAdminUser
+    });
+    
     if (!isAdminUser) {
         // 관리자가 아니면 메인 페이지로 리디렉션
+        console.error('관리자 권한이 없습니다.');
         alert('관리자 권한이 필요합니다.');
         window.location.href = 'index.html';
         return;

@@ -81,7 +81,16 @@ exports.login = async (req, res) => {
     
     // admin 계정인 경우 항상 관리자 권한 부여
     const isAdminUser = user.username.toLowerCase() === 'admin';
-    const isAdmin = isAdminUser || user.is_admin === 1;
+    // is_admin 값이 true(boolean) 또는 1(integer)인 경우 관리자 권한 부여
+    const hasAdminFlag = user.is_admin === true || user.is_admin === 1;
+    const isAdmin = isAdminUser || hasAdminFlag;
+    
+    console.log('로그인: 관리자 권한 확인', {
+      username: user.username,
+      'is_admin 원본값': user.is_admin,
+      'is_admin 타입': typeof user.is_admin,
+      '관리자 여부': isAdmin
+    });
     
     // 세션에 사용자 정보 저장 (세션 + JWT 하이브리드 방식)
     req.session.userId = user.id;
@@ -92,7 +101,8 @@ exports.login = async (req, res) => {
     const token = generateToken({
       id: user.id,
       username: user.username,
-      isAdmin: isAdmin
+      isAdmin: isAdmin,
+      is_admin: isAdmin // 명시적으로 is_admin 속성도 추가
     });
     
     res.status(200).json({ 
@@ -102,7 +112,8 @@ exports.login = async (req, res) => {
         id: user.id,
         username: user.username,
         balance: user.balance,
-        isAdmin: isAdmin
+        isAdmin: isAdmin,
+        is_admin: isAdmin // 이중으로 보장
       },
       token
     });
@@ -157,13 +168,23 @@ exports.verifyToken = async (req, res) => {
     
     // admin 계정인 경우 항상 관리자 권한 부여
     const isAdminUser = user.username.toLowerCase() === 'admin';
-    const isAdmin = isAdminUser || user.is_admin === 1;
+    // is_admin 값이 true(boolean) 또는 1(integer)인 경우 관리자 권한 부여
+    const hasAdminFlag = user.is_admin === true || user.is_admin === 1;
+    const isAdmin = isAdminUser || hasAdminFlag;
+    
+    console.log('토큰 검증: 관리자 권한 확인', {
+      username: user.username,
+      'is_admin 원본값': user.is_admin,
+      'is_admin 타입': typeof user.is_admin,
+      '관리자 여부': isAdmin
+    });
     
     // 새 토큰 생성
     const newToken = generateToken({
       id: user.id,
       username: user.username,
-      isAdmin: isAdmin
+      isAdmin: isAdmin,
+      is_admin: isAdmin // 명시적으로 is_admin 속성도 추가
     });
     
     console.log('새 토큰 생성 완료:', newToken.substring(0, 20) + '...');
@@ -175,7 +196,8 @@ exports.verifyToken = async (req, res) => {
         id: user.id,
         username: user.username,
         balance: user.balance,
-        isAdmin: isAdmin
+        isAdmin: isAdmin,
+        is_admin: isAdmin // 이중으로 보장
       }
     });
   } catch (error) {

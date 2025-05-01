@@ -107,6 +107,19 @@ class User {
           throw error;
         }
         
+        // is_admin 값 처리 - 결과가 있는 경우에만
+        if (data) {
+          // 항상 Boolean 타입으로 변환하여 일관성 유지
+          data.is_admin = data.is_admin === true || data.is_admin === 1;
+          console.log(`사용자 id=${id} 조회 결과: is_admin=${data.is_admin}, 타입=${typeof data.is_admin}`);
+          
+          // admin 사용자명은 항상 관리자 권한 부여
+          if (data.username && data.username.toLowerCase() === 'admin') {
+            data.is_admin = true;
+            console.log(`admin 계정 보장: is_admin=${data.is_admin}`);
+          }
+        }
+        
         resolve(data);
       } catch (error) {
         reject(error);
@@ -127,6 +140,19 @@ class User {
         
         if (error && error.code !== 'PGRST116') { // Record Not Found 에러가 아닌 경우에만 예외 처리
           throw error;
+        }
+        
+        // is_admin 값 처리 - 결과가 있는 경우에만
+        if (data) {
+          // 항상 Boolean 타입으로 변환하여 일관성 유지
+          data.is_admin = data.is_admin === true || data.is_admin === 1;
+          console.log(`사용자 username=${username} 조회 결과: is_admin=${data.is_admin}, 타입=${typeof data.is_admin}`);
+          
+          // admin 사용자명은 항상 관리자 권한 부여
+          if (data.username && data.username.toLowerCase() === 'admin') {
+            data.is_admin = true;
+            console.log(`admin 계정 보장: is_admin=${data.is_admin}`);
+          }
         }
         
         resolve(data);
@@ -165,6 +191,24 @@ class User {
         
         if (error) throw error;
         
+        // 모든 사용자의 is_admin 값 처리
+        if (data && Array.isArray(data)) {
+          data.forEach(user => {
+            // 항상 Boolean 타입으로 변환하여 일관성 유지
+            user.is_admin = user.is_admin === true || user.is_admin === 1;
+            
+            // admin 사용자명은 항상 관리자 권한 부여
+            if (user.username && user.username.toLowerCase() === 'admin') {
+              user.is_admin = true;
+            }
+            
+            // isAdmin 속성도 추가하여 클라이언트 코드와 일관성 유지
+            user.isAdmin = user.is_admin;
+          });
+          
+          console.log(`관리자 대시보드용 ${data.length}명의 사용자 목록 조회 완료`);
+        }
+        
         resolve(data);
       } catch (error) {
         reject(error);
@@ -183,6 +227,24 @@ class User {
           .order('username', { ascending: true });
         
         if (error) throw error;
+        
+        // 모든 사용자의 is_admin 값 처리
+        if (data && Array.isArray(data)) {
+          data.forEach(user => {
+            // 항상 Boolean 타입으로 변환하여 일관성 유지
+            user.is_admin = user.is_admin === true || user.is_admin === 1;
+            
+            // admin 사용자명은 항상 관리자 권한 부여
+            if (user.username && user.username.toLowerCase() === 'admin') {
+              user.is_admin = true;
+            }
+            
+            // isAdmin 속성도 추가하여 클라이언트 코드와 일관성 유지
+            user.isAdmin = user.is_admin;
+          });
+          
+          console.log(`검색어 "${query}"로 ${data.length}명의 사용자 검색 완료`);
+        }
         
         resolve(data);
       } catch (error) {

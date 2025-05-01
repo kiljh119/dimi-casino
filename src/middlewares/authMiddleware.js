@@ -29,15 +29,29 @@ exports.authenticateJWT = (req, res, next) => {
       
       console.log('토큰에서 추출된 사용자 정보:', user);
       
-      // admin 사용자 처리 - username이 admin인 경우 관리자 권한 강제 부여
-      const isAdminUser = user.username.toLowerCase() === 'admin';
+      // 관리자 권한 확인 - 다음 중 하나라도 true면 관리자
+      // 1. username이 'admin'
+      // 2. isAdmin 속성이 true
+      // 3. is_admin 속성이 true 또는 1
+      const isAdminUser = 
+        user.username.toLowerCase() === 'admin' || 
+        user.isAdmin === true || 
+        user.is_admin === true || 
+        user.is_admin === 1;
       
       // 사용자 정보 설정
       req.session.userId = user.id;
       req.session.username = user.username;
-      req.session.isAdmin = isAdminUser || user.isAdmin || user.is_admin === 1 || user.is_admin === true;
+      req.session.isAdmin = isAdminUser;
       
-      console.log('세션에 설정된 사용자 정보:', req.session);
+      // 디버깅을 위해 관리자 여부 로깅
+      console.log(`사용자 ${user.username}의 관리자 여부:`, req.session.isAdmin ? '예' : '아니오');
+      console.log('관리자 여부 판단 기준:', {
+        'username === admin': user.username.toLowerCase() === 'admin',
+        'isAdmin === true': user.isAdmin === true,
+        'is_admin === true': user.is_admin === true,
+        'is_admin === 1': user.is_admin === 1
+      });
       
       next();
     });
@@ -51,10 +65,17 @@ exports.authenticateJWT = (req, res, next) => {
  * 관리자 권한 확인 미들웨어
  */
 exports.isAdmin = (req, res, next) => {
-  console.log('관리자 권한 확인 미들웨어 실행:', req.session);
+  console.log('관리자 권한 확인 미들웨어 실행');
+  console.log('세션 정보:', req.session);
   
-  if (!req.session.isAdmin) {
-    return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
+  if (!req.session || !req.session.isAdmin) {
+    console.error('관리자 권한 없음:', req.session ? req.session.username : '세션 없음');
+    return res.status(403).json({ 
+      success: false, 
+      message: '관리자 권한이 필요합니다. 관리자로 로그인해주세요.' 
+    });
   }
+  
+  console.log(`사용자 ${req.session.username}에게 관리자 접근 권한 승인됨`);
   next();
 }; 

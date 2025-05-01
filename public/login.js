@@ -42,18 +42,26 @@ function saveUserInfo(user) {
     
     // 관리자 권한 확인 및 설정
     if (user) {
-        // is_admin 프로퍼티가 있다면 isAdmin으로 변환
-        if (user.isAdmin === undefined && user.is_admin !== undefined) {
-            user.isAdmin = user.is_admin === true || user.is_admin === 1;
-        }
-        
-        // admin 사용자명이면 강제로 관리자 권한 설정
+        // 1. 사용자명이 admin인 경우 무조건 관리자 권한 부여
         if (user.username && user.username.toLowerCase() === 'admin') {
             user.isAdmin = true;
             user.is_admin = true;
+            console.log('admin 계정 - 관리자 권한 부여됨');
         }
         
-        console.log('저장되는 사용자 정보의 관리자 여부:', user.isAdmin);
+        // 2. isAdmin 속성이 없고 is_admin 속성이 있는 경우 변환
+        if (user.isAdmin === undefined && user.is_admin !== undefined) {
+            user.isAdmin = user.is_admin === true || user.is_admin === 1;
+            console.log('is_admin을 isAdmin으로 변환:', user.isAdmin);
+        }
+        
+        // 3. is_admin 속성이 true면 isAdmin도 true로 설정
+        if (user.is_admin === true || user.is_admin === 1) {
+            user.isAdmin = true;
+            console.log('is_admin 속성이 true - 관리자 권한 부여됨');
+        }
+        
+        console.log('저장되는 사용자 정보의 관리자 여부:', user.isAdmin ? '예' : '아니오');
     }
     
     // window.currentUser에 설정
@@ -68,85 +76,16 @@ function saveUserInfo(user) {
         if (token) {
             userData.token = token;
         }
+        
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
-    } catch (e) {
-        console.error('사용자 정보 저장 오류:', e);
+    } catch (error) {
+        console.error('사용자 정보 저장 오류:', error);
     }
 }
 
 // 메인 메뉴 화면으로 이동
 function redirectToMainMenu() {
     window.location.href = '/';
-}
-
-// 토큰으로 자동 로그인
-async function autoLogin() {
-    const token = getToken();
-    if (!token) return false;
-
-    try {
-        console.log('자동 로그인 시도: 토큰으로 사용자 확인');
-        const response = await fetch('/api/verify-token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ token }),
-        });
-
-        const data = await response.json();
-        
-        if (data.success) {
-            console.log('자동 로그인 성공');
-            
-            // 새 토큰이 있으면 저장
-            if (data.token) {
-                console.log('새 토큰 저장');
-                saveToken(data.token);
-            }
-            
-            // 사용자 정보와 관리자 권한 확인
-            console.log('자동 로그인 사용자 정보:', data.user);
-            
-            // 명시적으로 isAdmin 속성 설정 (is_admin이 있을 경우 변환)
-            if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
-                data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
-            }
-            
-            // admin 사용자명이면 강제로 관리자 권한 설정
-            if (data.user.username.toLowerCase() === 'admin') {
-                data.user.isAdmin = true;
-                console.log('admin 계정 자동 로그인 - 관리자 권한 설정됨');
-            }
-            
-            // 사용자 정보 저장
-            saveUserInfo(data.user);
-            
-            // 관리자 로그인인 경우
-            if (data.user.isAdmin || data.user.is_admin === true || data.user.is_admin === 1 || data.user.username.toLowerCase() === 'admin') {
-                console.log('관리자 권한으로 자동 로그인 성공');
-                redirectToMainMenu();
-                // 관리자도 소켓에 로그인 정보 전달
-                socket.emit('login', { username: data.user.username });
-            } else {
-                // 일반 사용자 로그인
-                socket.emit('login', { username: data.user.username });
-                redirectToMainMenu();
-            }
-            
-            return true;
-        } else {
-            console.log('자동 로그인 실패: 토큰이 유효하지 않음');
-            // 유효하지 않은 토큰이면 삭제
-            removeToken();
-            return false;
-        }
-    } catch (error) {
-        console.error('자동 로그인 오류:', error);
-        removeToken();
-        return false;
-    }
 }
 
 // 로그인 처리
@@ -179,53 +118,122 @@ function handleLogin() {
         setButtonState(loginBtn, false, '로그인');
         
         if (data.success) {
-            // 폼 입력 초기화
+            // 폼 입력값 초기화
             loginUsername.value = '';
             loginPassword.value = '';
             
-            // JWT 토큰 저장
-            if (data.token) {
-                console.log('로그인 성공: 토큰 저장');
-                saveToken(data.token);
+            // 토큰 저장
+            saveToken(data.token);
+            
+            // 관리자 권한 확인 및 사용자 정보 저장
+            if (data.user) {
+                // 1. 사용자명이 admin인 경우
+                if (data.user.username && data.user.username.toLowerCase() === 'admin') {
+                    data.user.isAdmin = true;
+                    data.user.is_admin = true;
+                    console.log('admin 계정 로그인 - 관리자 권한 부여됨');
+                }
+                
+                // 2. isAdmin 속성이 없고 is_admin 속성이 있는 경우
+                if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
+                    data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
+                    console.log('is_admin을 isAdmin으로 변환:', data.user.isAdmin);
+                }
+                
+                // 3. is_admin 속성이 true면 isAdmin도 true로 설정
+                if (data.user.is_admin === true || data.user.is_admin === 1) {
+                    data.user.isAdmin = true;
+                    console.log('is_admin 속성이 true - 관리자 권한 부여됨');
+                }
+                
+                console.log('로그인 사용자 정보:', data.user);
+                console.log('관리자 여부:', data.user.isAdmin ? '예' : '아니오');
+                
+                // 사용자 정보 저장
+                saveUserInfo(data.user);
             }
             
-            // 사용자 정보 저장 및 관리자 권한 확인
-            console.log('로그인 사용자 정보:', data.user);
-            
-            // 명시적으로 isAdmin 속성 설정 (is_admin이 있을 경우 변환)
-            if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
-                data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
-            }
-            
-            // admin 사용자명이면 강제로 관리자 권한 설정
-            if (data.user.username.toLowerCase() === 'admin') {
-                data.user.isAdmin = true;
-                console.log('admin 계정 로그인 - 관리자 권한 설정됨');
-            }
-            
-            saveUserInfo(data.user);
-            
-            // 관리자 로그인인 경우
-            if (data.user.isAdmin || data.user.is_admin === true || data.user.is_admin === 1 || data.user.username.toLowerCase() === 'admin') {
-                console.log('관리자 권한으로 로그인 성공');
-                // 관리자도 소켓에 로그인 정보 전달
-                socket.emit('login', { username });
-                redirectToMainMenu();
-            } else {
-                // 일반 사용자 로그인
-                socket.emit('login', { username });
-                redirectToMainMenu();
-            }
+            // 로그인 성공 후 리디렉션
+            window.location.href = 'index.html';
         } else {
-            loginError.textContent = data.message;
+            loginError.textContent = data.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.';
         }
     })
     .catch(error => {
-        console.error('Login error:', error);
-        loginError.textContent = '서버 오류가 발생했습니다.';
+        console.error('로그인 처리 중 오류:', error);
         isProcessing = false;
         setButtonState(loginBtn, false, '로그인');
+        loginError.textContent = '서버와 통신 중 오류가 발생했습니다. 다시 시도해주세요.';
     });
+}
+
+// 토큰으로 자동 로그인
+async function autoLogin() {
+    const token = getToken();
+    if (!token) return false;
+
+    try {
+        console.log('자동 로그인 시도: 토큰으로 사용자 확인');
+        const response = await fetch('/api/verify-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ token }),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('자동 로그인 성공');
+            
+            // 새 토큰이 있으면 저장
+            if (data.token) {
+                console.log('새 토큰 저장');
+                saveToken(data.token);
+            }
+            
+            // 사용자 정보와 관리자 권한 확인
+            console.log('자동 로그인 사용자 정보:', data.user);
+            
+            if (data.user) {
+                // 1. 사용자명이 admin인 경우
+                if (data.user.username && data.user.username.toLowerCase() === 'admin') {
+                    data.user.isAdmin = true;
+                    data.user.is_admin = true;
+                    console.log('admin 계정 - 관리자 권한 부여됨');
+                }
+                
+                // 2. isAdmin 속성이 없고 is_admin 속성이 있는 경우
+                if (data.user.isAdmin === undefined && data.user.is_admin !== undefined) {
+                    data.user.isAdmin = data.user.is_admin === true || data.user.is_admin === 1;
+                    console.log('is_admin을 isAdmin으로 변환:', data.user.isAdmin);
+                }
+                
+                // 3. is_admin 속성이 true면 isAdmin도 true로 설정
+                if (data.user.is_admin === true || data.user.is_admin === 1) {
+                    data.user.isAdmin = true;
+                    console.log('is_admin 속성이 true - 관리자 권한 부여됨');
+                }
+                
+                console.log('최종 관리자 여부:', data.user.isAdmin ? '예' : '아니오');
+                
+                // 사용자 정보 저장
+                saveUserInfo(data.user);
+            }
+            
+            return true;
+        } else {
+            console.error('자동 로그인 실패:', data.message);
+            clearAuthData();
+            return false;
+        }
+    } catch (error) {
+        console.error('자동 로그인 중 오류 발생:', error);
+        clearAuthData();
+        return false;
+    }
 }
 
 // 버튼 상태 설정 (로딩 중 또는 기본 상태)

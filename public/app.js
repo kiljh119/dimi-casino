@@ -23,7 +23,7 @@ function getUserInfo() {
         if (!userJson) {
             userJson = localStorage.getItem('user');
             if (userJson) {
-                console.log("'user' 키에서 사용자 정보 찾음");
+                console.log("`user` 키에서 사용자 정보 찾음");
             }
         } else {
             console.log("USER_KEY에서 사용자 정보 찾음");
@@ -36,17 +36,28 @@ function getUserInfo() {
         // JSON 파싱 및 반환
         const userData = JSON.parse(userJson);
         
-        // isAdmin 값이 없고 is_admin이 있다면 변환
-        if (userData && userData.isAdmin === undefined && userData.is_admin !== undefined) {
-            userData.isAdmin = userData.is_admin === 1 || userData.is_admin === true;
-            console.log('사용자 정보 조회 - is_admin을 isAdmin으로 변환:', userData.isAdmin);
-        }
-        
-        // admin 계정은 항상 관리자 권한 부여
-        if (userData && userData.username && userData.username.toLowerCase() === 'admin') {
-            userData.isAdmin = true;
-            userData.is_admin = true;
-            console.log('admin 계정 확인 - 관리자 권한 설정됨');
+        // 관리자 권한 확인 및 표준화
+        if (userData) {
+            // 1. is_admin 값을 isAdmin으로 변환
+            if (userData.isAdmin === undefined && userData.is_admin !== undefined) {
+                userData.isAdmin = userData.is_admin === 1 || userData.is_admin === true;
+                console.log('is_admin을 isAdmin으로 변환:', userData.isAdmin);
+            }
+            
+            // 2. 사용자명이 admin인 경우 무조건 관리자 권한 부여
+            if (userData.username && userData.username.toLowerCase() === 'admin') {
+                userData.isAdmin = true;
+                userData.is_admin = true;
+                console.log('admin 계정 - 관리자 권한 부여됨');
+            }
+            
+            // 3. is_admin이 true이면 isAdmin도 true로 설정
+            if (userData.is_admin === true || userData.is_admin === 1) {
+                userData.isAdmin = true;
+                console.log('is_admin 속성 감지 - 관리자 권한 부여됨');
+            }
+            
+            console.log('최종 사용자 관리자 여부:', userData.isAdmin);
         }
         
         return userData;
