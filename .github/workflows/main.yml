@@ -37,6 +37,14 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:latest
+          build-args: |
+            PORT=${{ secrets.PORT }}
+            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+            DB_PATH=${{ secrets.DB_PATH }}
+            SESSION_DB_PATH=${{ secrets.SESSION_DB_PATH }}
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
   deploy:
     needs: build
@@ -55,4 +63,11 @@ jobs:
           docker rm ${{ env.NAME }} || true
           docker rmi ${{ env.DOCKER_IMAGE }}:latest || true
           docker run -d -p 3003:3000 --name ${{ env.NAME }} --restart always \
+            -e PORT=${{ secrets.PORT }} \
+            -e SESSION_SECRET=${{ secrets.SESSION_SECRET }} \
+            -e DB_PATH=${{ secrets.DB_PATH }} \
+            -e SESSION_DB_PATH=${{ secrets.SESSION_DB_PATH }} \
+            -e SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            -e SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+            -e SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             ${{ env.DOCKER_IMAGE }}:latest
