@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 
-// JWT 비밀키 (실제 프로덕션에서는 환경 변수 등으로 안전하게 관리해야 함)
-const JWT_SECRET = 'baccarat-game-jwt-secret-key';
+// 환경변수 로드
+dotenv.config();
+
+// JWT 비밀키
+const JWT_SECRET = process.env.JWT_SECRET || 'bacaraGameSecretKey2025';
 
 // 토큰 만료 시간 설정 (30일)
 const TOKEN_EXPIRE = '30d';
@@ -28,6 +32,7 @@ const verifyToken = (token) => {
   }
 };
 
+// 모듈 내보내기
 module.exports = {
   generateToken,
   verifyToken,

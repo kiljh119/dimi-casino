@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const bcrypt = require('bcrypt');
 
 // 관리자 권한 확인 미들웨어
 const isAdmin = (req, res, next) => {

@@ -6,6 +6,7 @@ const playButtons = document.querySelectorAll('.play-btn');
 const adminPanelButton = document.getElementById('admin-panel-button');
 const goToAdminBtn = document.getElementById('go-to-admin');
 const adminScreen = document.getElementById('admin-screen');
+const goToMyPageBtn = document.getElementById('go-to-mypage');
 
 // 관리자 화면 표시
 function showAdminScreen() {
@@ -101,6 +102,19 @@ export function initMenu(socket) {
             }
         });
     });
+    
+    // 마이페이지로 이동 버튼
+    if (goToMyPageBtn) {
+        goToMyPageBtn.addEventListener('click', () => {
+            // 사용자 정보 로컬 스토리지에 저장
+            if (window.app?.currentUser) {
+                console.log('마이페이지 이동 전 사용자 정보 저장:', window.app.currentUser);
+                localStorage.setItem('user', JSON.stringify(window.app.currentUser));
+                // 마이페이지로 이동
+                window.location.href = '/my-page.html';
+            }
+        });
+    }
     
     // 관리자 페이지로 이동 버튼
     goToAdminBtn.addEventListener('click', () => {

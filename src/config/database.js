@@ -1,11 +1,19 @@
 const sqlite3 = require('sqlite3').verbose();
+const dotenv = require('dotenv');
+
+// 환경변수 로드
+dotenv.config();
+
+// 환경변수에서 데이터베이스 경로 가져오기
+const dbPath = process.env.DB_PATH || './database.sqlite';
 
 // 데이터베이스 연결 생성
-const db = new sqlite3.Database('./database.sqlite', (err) => {
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Database connection error:', err.message);
   } else {
     console.log('Connected to the SQLite database');
+    console.log(`Database path: ${dbPath}`);
     initializeDatabase();
   }
 });
@@ -13,7 +21,7 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
 // 데이터베이스 초기화
 function initializeDatabase() {
   db.serialize(() => {
-    // 사용자 테이블
+    // 기존 테이블이 없으면 생성
     db.run(`CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -22,6 +30,7 @@ function initializeDatabase() {
       wins INTEGER DEFAULT 0,
       losses INTEGER DEFAULT 0,
       profit REAL DEFAULT 0.0,
+      is_admin BOOLEAN DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 

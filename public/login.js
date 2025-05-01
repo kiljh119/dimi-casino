@@ -69,10 +69,12 @@ async function autoLogin() {
     if (!token) return false;
 
     try {
+        console.log('자동 로그인 시도: 토큰으로 사용자 확인');
         const response = await fetch('/api/verify-token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ token }),
         });
@@ -80,6 +82,14 @@ async function autoLogin() {
         const data = await response.json();
         
         if (data.success) {
+            console.log('자동 로그인 성공');
+            
+            // 새 토큰이 있으면 저장
+            if (data.token) {
+                console.log('새 토큰 저장');
+                saveToken(data.token);
+            }
+            
             // 사용자 정보 저장
             saveUserInfo(data.user);
             
@@ -94,12 +104,13 @@ async function autoLogin() {
             
             return true;
         } else {
+            console.log('자동 로그인 실패: 토큰이 유효하지 않음');
             // 유효하지 않은 토큰이면 삭제
             removeToken();
             return false;
         }
     } catch (error) {
-        console.error('Auto login error:', error);
+        console.error('자동 로그인 오류:', error);
         removeToken();
         return false;
     }

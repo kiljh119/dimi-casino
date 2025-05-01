@@ -250,6 +250,79 @@ class User {
       });
     });
   }
+
+  // 관리자 계정 확인 메서드 추가
+  static isAdmin(userId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        'SELECT is_admin FROM users WHERE id = ?',
+        [userId],
+        (err, user) => {
+          if (err) return reject(err);
+          if (!user) return resolve(false);
+          resolve(user.is_admin === 1);
+        }
+      );
+    });
+  }
+
+  // 관리자 계정 수정 (비밀번호 변경)
+  static updateAdminPassword(adminId, newPassword) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 관리자 확인
+        const isAdmin = await this.isAdmin(adminId);
+        if (!isAdmin) {
+          return reject(new Error('관리자 계정이 아닙니다.'));
+        }
+        
+        // 비밀번호 해싱
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        db.run(
+          'UPDATE users SET password = ? WHERE id = ? AND is_admin = 1',
+          [hashedPassword, adminId],
+          function (err) {
+            if (err) return reject(err);
+            resolve({
+              success: true,
+              message: '관리자 비밀번호가 변경되었습니다.',
+              changes: this.changes
+            });
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  // 일반 사용자 비밀번호 변경
+  static updatePassword(userId, newPassword) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // 비밀번호 해싱
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        db.run(
+          'UPDATE users SET password = ? WHERE id = ?',
+          [hashedPassword, userId],
+          function(err) {
+            if (err) return reject(err);
+            resolve({
+              success: true,
+              message: '비밀번호가 변경되었습니다.',
+              changes: this.changes
+            });
+          }
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 }
 
 module.exports = User; 

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지 - 카지노넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 마이페이지 화면 -->
+        <div id="my-page-screen" class="screen">
+            <header>
+                <div class="game-header">
+                    <div class="game-nav">
+                        <button id="back-to-menu" class="nav-btn"><i class="fas fa-arrow-left"></i> 메뉴로</button>
+                        <h2>마이페이지</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-name"></span>
+                        <span id="user-balance"></span>
+                    </div>
+                    <button id="logout-btn" class="logout-button"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+                </div>
+            </header>
+            
+            <div class="my-page-container">
+                <div class="my-page-section">
+                    <h3>계정 정보</h3>
+                    <div class="account-info">
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-user"></i> 사용자명</div>
+                            <div class="info-value" id="account-username"></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-coins"></i> 현재 잔액</div>
+                            <div class="info-value" id="account-balance"></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-trophy"></i> 승리 횟수</div>
+                            <div class="info-value" id="account-wins">0</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-times-circle"></i> 패배 횟수</div>
+                            <div class="info-value" id="account-losses">0</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-chart-line"></i> 총 이익</div>
+                            <div class="info-value" id="account-profit">$0</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label"><i class="fas fa-calendar-alt"></i> 가입일</div>
+                            <div class="info-value" id="account-created">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="my-page-section">
+                    <h3>비밀번호 변경</h3>
+                    <div class="password-change-form">
+                        <div class="form-group">
+                            <label for="current-password">현재 비밀번호</label>
+                            <div class="input-icon-wrapper">
+                                <input type="password" id="current-password" placeholder="현재 비밀번호 입력">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">새 비밀번호</label>
+                            <div class="input-icon-wrapper">
+                                <input type="password" id="new-password" placeholder="새 비밀번호 입력">
+                                <i class="fas fa-key"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">새 비밀번호 확인</label>
+                            <div class="input-icon-wrapper">
+                                <input type="password" id="confirm-password" placeholder="비밀번호 다시 입력">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <button id="change-password-btn" class="auth-button">
+                            <i class="fas fa-sync-alt"></i> 비밀번호 변경
+                        </button>
+                        <div id="password-message" class="message"></div>
+                    </div>
+                </div>
+                
+                <div class="my-page-section">
+                    <h3>최근 게임 이력</h3>
+                    <div class="game-records-container">
+                        <table class="game-records-table">
+                            <thead>
+                                <tr>
+                                    <th>날짜/시간</th>
+                                    <th>게임 결과</th>
+                                    <th>베팅금액</th>
+                                    <th>결과</th>
+                                    <th>플레이어 점수</th>
+                                    <th>뱅커 점수</th>
+                                </tr>
+                            </thead>
+                            <tbody id="game-history-table">
+                                <!-- 여기에 게임 이력이 동적으로 추가됩니다 -->
+                            </tbody>
+                        </table>
+                        <div id="no-history-message" class="no-records-message">
+                            <i class="fas fa-info-circle"></i>
+                            <p>최근 게임 이력이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="my-page.js"></script>
+</body>
+</html> 

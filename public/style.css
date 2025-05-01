@@ -370,6 +370,7 @@ body {
   position: relative;
   overflow: hidden;
   gap: 15px;
+  cursor: pointer;
 }
 
 .user-info:before {
@@ -2254,4 +2255,134 @@ body {
 
 .logout-button i {
   font-size: 14px;
+}
+
+/* 마이페이지 스타일 */
+.my-page-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.my-page-section {
+  background-color: var(--card-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.my-page-section h3 {
+  color: var(--primary-dark);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+.account-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  padding: 15px;
+  background-color: rgba(108, 99, 255, 0.05);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--primary-color);
+  transition: all var(--transition-fast);
+}
+
+.info-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+  background-color: rgba(108, 99, 255, 0.08);
+}
+
+.info-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.info-label i {
+  margin-right: 8px;
+  color: var(--primary-color);
+}
+
+.info-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.password-change-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.password-change-form .form-group {
+  margin-bottom: 20px;
+}
+
+.password-change-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+#change-password-btn {
+  margin-top: 15px;
+}
+
+.message {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  text-align: center;
+  display: none;
+}
+
+.message.success {
+  display: block;
+  background-color: rgba(32, 201, 151, 0.15);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.message.error {
+  display: block;
+  background-color: rgba(255, 107, 107, 0.15);
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+}
+
+@media (max-width: 768px) {
+  .account-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .password-change-form {
+    padding: 0;
+  }
+  
+  .my-page-section {
+    padding: 20px 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .my-page-container {
+    padding: 10px;
+  }
+  
+  .info-value {
+    font-size: 1.1rem;
+  }
 }
