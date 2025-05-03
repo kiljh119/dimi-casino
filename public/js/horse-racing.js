@@ -1436,15 +1436,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('user', JSON.stringify(tempUser));
                 userData = JSON.stringify(tempUser);
                 isLoggedIn = false;
+                localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
             } else {
                 // 데이터가 있으면 로그인 상태 확인
                 const parsedUser = JSON.parse(userData);
                 if (parsedUser && parsedUser.username && parsedUser.username !== '게스트 사용자' && !parsedUser.isGuest) {
                     isLoggedIn = true;
+                    localStorage.setItem('loggedIn', 'true'); // 로그인 상태 플래그 설정
                     console.log('로그인 사용자 정보 로드:', parsedUser.username);
                 } else {
                     console.log('게스트 사용자 정보 로드');
                     isLoggedIn = false;
+                    localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
                 }
             }
             
@@ -1461,6 +1464,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     isGuest: true
                 };
                 localStorage.setItem('user', JSON.stringify(currentUser));
+                localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
                 isLoggedIn = false;
             }
             
@@ -1479,6 +1483,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 isGuest: true
             };
             localStorage.setItem('user', JSON.stringify(currentUser));
+            localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
             
             userNameElement.textContent = currentUser.username;
             updateUserBalance(currentUser.balance);
