@@ -420,12 +420,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('로컬에서 말 데이터 생성');
             for (let i = 0; i < horseNames.length; i++) {
                 // 배당률 랜덤 생성 (1.5~10.0 사이)
-                const odds = (Math.random() * 8.5 + 1.5).toFixed(1);
+                const odds = parseFloat((Math.random() * 8.5 + 1.5).toFixed(1));
                 
                 horses.push({
                     id: i + 1,
                     name: horseNames[i],
-                    odds: parseFloat(odds),
+                    odds: odds,
                     position: 0, // 초기 위치
                     lane: i, // 레인 번호
                     finishTime: null // 완주 시간
@@ -439,11 +439,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (horses.length === 0) {
             console.warn('말이 생성되지 않아 기본 데이터로 생성합니다.');
             for (let i = 0; i < horseNames.length; i++) {
-                const odds = (Math.random() * 8.5 + 1.5).toFixed(1);
+                const odds = parseFloat((Math.random() * 8.5 + 1.5).toFixed(1));
                 horses.push({
                     id: i + 1,
                     name: horseNames[i],
-                    odds: parseFloat(odds),
+                    odds: odds,
                     position: 0,
                     lane: i,
                     finishTime: null
@@ -529,6 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="lane-horse-name">${horse.name}</span>
                     <span class="lane-finish-rank">${horse.actualRank}위</span>
                     <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
+                    <span class="lane-horse-odds">${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}배</span>
                 `;
                 lane.appendChild(laneResultElement);
             }
@@ -570,6 +571,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     horseElement.style.transform = 'translateX(0)';
                     // z-index 설정
                     horseElement.style.zIndex = '10';
+                    
+                    // 이미 완주한 말은 이름과 배당률 숨기기
+                    const horseName = horseElement.querySelector('.horse-name');
+                    const horseOdds = horseElement.querySelector('.horse-odds');
+                    if (horseName) horseName.style.display = 'none';
+                    if (horseOdds) horseOdds.style.display = 'none';
                 } else {
                     // 초기 위치 설정 (40px는 레인의 왼쪽 여백)
                     horseElement.style.left = `${horse.position + 40}px`;
@@ -587,13 +594,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const odds = document.createElement('span');
             odds.className = 'horse-odds';
-            odds.textContent = `${horse.odds}배`;
+            odds.textContent = `${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}배`;
             
             // 완주 시간 표시 요소 생성
             const finishTime = document.createElement('span');
             finishTime.className = 'horse-finish-time';
             finishTime.id = `finish-time-${horse.id}`;
-            finishTime.style.display = 'none'; // 항상 초기에는 숨김 처리
+            finishTime.style.display = 'none'; // 초기에는 숨김 처리
             
             horseElement.appendChild(icon);
             horseElement.appendChild(name);
@@ -651,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const odds = document.createElement('div');
             odds.className = 'horse-option-odds';
-            odds.textContent = `${horse.odds}x`;
+            odds.textContent = `${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}x`;
             
             option.appendChild(name);
             option.appendChild(odds);
@@ -1188,6 +1195,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const horseIconOffset = 45; // 말 아이콘 위치 (약 45px 정도 떨어진 위치)
                     const hasReachedFinishLine = newPosition >= (GLOBAL_TRACK_WIDTH - horseIconOffset);
                     
+                    // 결승선 접근 구간 정의 (결승선으로부터 100px 이내)
+                    const isNearFinishLine = (GLOBAL_TRACK_WIDTH - newPosition) < 100;
+                    
                     // 결승선에 도달했을 때
                     if (hasReachedFinishLine) {
                         // 1. 트랜지션 효과 완전히 제거 (튕김 방지)
@@ -1201,18 +1211,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         // 5. 완주 처리 호출
                         handleHorseFinish(horse, horseElement, frameIndex);
                     } 
-                    // 결승선 접근 시 (결승선 가까이에서 부드럽게)
-                    else if (GLOBAL_TRACK_WIDTH - newPosition < 60) {
-                        // 결승선 가까이에서는 더 느리게 이동
-                        horseElement.style.transition = 'left 0.3s ease-out';
+                    // 결승선 접근 시 - 움직임을 더 부드럽게 하고 움찔거림 방지
+                    else if (isNearFinishLine) {
+                        // 결승선 가까이에서는 트랜지션을 완전히 제거하고 직접 위치 설정
+                        horseElement.style.removeProperty('transition');
                         horseElement.style.left = `${newPosition + 40}px`; // 40px는 초기 offset
+                        
+                        // near-finish 클래스 추가
+                        horseElement.classList.add('near-finish');
+                        
                         // 결승선 근처에서 이름표가 결승선과 겹치지 않도록 조정
-                        horseElement.style.transform = 'translateX(-10px)';
+                        const distanceToFinish = GLOBAL_TRACK_WIDTH - newPosition;
+                        if (distanceToFinish < 60) {
+                            horseElement.style.transform = 'translateX(-10px)';
+                        } else {
+                            horseElement.style.transform = '';
+                        }
+                        
                         // z-index 설정
                         horseElement.style.zIndex = '10';
                     }
                     // 일반적인 위치
                     else {
+                        // 결승선에서 멀어지면 near-finish 클래스 제거
+                        horseElement.classList.remove('near-finish');
+                        
                         horseElement.style.transition = 'left 0.15s linear';
                         horseElement.style.left = `${newPosition + 40}px`; // 40px는 초기 offset
                         horseElement.style.transform = '';
@@ -1398,47 +1421,69 @@ document.addEventListener('DOMContentLoaded', function() {
     // 로컬 스토리지에서 사용자 정보 불러오기
     function loadUserInfo() {
         try {
-            // 로컬 스토리지에 사용자 정보가 없으면 임시 정보 생성
+            // 로컬 스토리지에서 사용자 정보 가져오기
             let userData = localStorage.getItem('user');
+            let isLoggedIn = false;
+            
             if (!userData) {
+                console.log('로그인 정보가 없습니다. 게스트 모드로 진행합니다.');
                 const tempUser = {
+                    id: 'local_user_' + Date.now(),
                     username: '게스트 사용자',
-                    balance: 50000
+                    balance: 50000,
+                    isGuest: true
                 };
                 localStorage.setItem('user', JSON.stringify(tempUser));
                 userData = JSON.stringify(tempUser);
+                isLoggedIn = false;
+            } else {
+                // 데이터가 있으면 로그인 상태 확인
+                const parsedUser = JSON.parse(userData);
+                if (parsedUser && parsedUser.username && parsedUser.username !== '게스트 사용자' && !parsedUser.isGuest) {
+                    isLoggedIn = true;
+                    console.log('로그인 사용자 정보 로드:', parsedUser.username);
+                } else {
+                    console.log('게스트 사용자 정보 로드');
+                    isLoggedIn = false;
+                }
             }
             
             currentUser = JSON.parse(userData);
             console.log('로컬 스토리지 사용자 정보:', currentUser);
             
+            // 사용자 정보가 유효하지 않으면 임시 계정 생성
             if (!currentUser || !currentUser.username) {
                 console.error('로그인 정보가 없습니다. 임시 계정을 생성합니다.');
                 currentUser = {
+                    id: 'local_user_' + Date.now(),
                     username: '게스트 사용자',
-                    balance: 50000
+                    balance: 50000,
+                    isGuest: true
                 };
                 localStorage.setItem('user', JSON.stringify(currentUser));
+                isLoggedIn = false;
             }
             
             // 사용자 정보 표시
             userNameElement.textContent = currentUser.username;
             updateUserBalance(currentUser.balance);
             
-            return true;
+            return isLoggedIn;
         } catch (e) {
             console.error('저장된 사용자 정보 파싱 오류:', e);
             // 오류 시 임시 사용자 생성
             currentUser = {
+                id: 'local_user_' + Date.now(),
                 username: '게스트 사용자',
-                balance: 50000
+                balance: 50000,
+                isGuest: true
             };
             localStorage.setItem('user', JSON.stringify(currentUser));
             
             userNameElement.textContent = currentUser.username;
             updateUserBalance(currentUser.balance);
             
-            return true;
+            return false;
         }
     }
     
@@ -1558,6 +1603,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // 로그인 상태 실시간 확인 (localStorage 직접 체크)
+        const isLoggedInNow = localStorage.getItem("loggedIn") === "true";
+        
+        if (!isLoggedInNow || !currentUser || !currentUser.username || currentUser.username === '게스트 사용자' || currentUser.isGuest) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+        
         if (amount > currentUser.balance) {
             alert('잔액이 부족합니다.');
             return;
@@ -1588,6 +1641,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (serverConnected) {
             socket.emit('horse_racing_bet', {
                 username: currentUser.username,
+                userId: currentUser.id || 'local_user',
+                isGuest: currentUser.isGuest || false,
+                isLocalUser: true,
+                currentBalance: currentUser.balance,
                 betType: betInfo.type,
                 horseIds: betInfo.horses.map(h => h.id),
                 amount: betInfo.amount
@@ -1596,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('서버 연결이 불안정합니다. 베팅이 정상적으로 처리되지 않을 수 있습니다.');
         }
         
-        alert('베팅이 완료되었습니다!');
+        // 로컬 성공 메시지 제거 - 서버 응답에서 처리
     }
     
     // 베팅 폼 초기화
@@ -1877,7 +1934,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('게임 초기화 시작...');
         
         // 사용자 정보 로드
-        if (!loadUserInfo()) return;
+        const isLoggedIn = loadUserInfo();
+        console.log('로그인 상태:', isLoggedIn ? '로그인됨' : '게스트 모드');
         
         // 메뉴로 버튼 이벤트
         backToMenuButton.addEventListener('click', function() {
@@ -1895,16 +1953,60 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('결승선 위치 조정됨:', FINISH_LINE_OFFSET, 'px');
         }
         
-        // 창 크기 변경 시 트랙 폭 재계산
+        // 창 크기 변경 시 트랙 폭 재계산 및 말 위치 조정 (디바운스 적용)
+        let resizeTimeout;
         window.addEventListener('resize', function() {
-            calculateTrackWidth();
-            // 말 위치 재조정
-            horses.forEach(horse => {
-                const horseElement = document.getElementById(`horse-${horse.id}`);
-                if (horseElement) {
-                    horseElement.style.left = `${horse.position + 40}px`;
+            // 디바운스 처리 - 연속적인 resize 이벤트에서 마지막 이벤트만 처리
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                const oldTrackWidth = GLOBAL_TRACK_WIDTH;
+                calculateTrackWidth();
+                const newTrackWidth = GLOBAL_TRACK_WIDTH;
+                
+                // 트랙 폭이 크게 변경된 경우에만 말 위치 재조정
+                if (Math.abs(oldTrackWidth - newTrackWidth) > 10) {
+                    console.log('창 크기 변경으로 말 위치 재조정:', oldTrackWidth, '->', newTrackWidth);
+                    
+                    // 결승선 위치 조정
+                    const finishLine = document.querySelector('.finish-line');
+                    if (finishLine) {
+                        finishLine.style.right = `${FINISH_LINE_OFFSET}px`;
+                    }
+                    
+                    // 모든 말 위치 재조정
+                    horses.forEach(horse => {
+                        const horseElement = document.getElementById(`horse-${horse.id}`);
+                        if (horseElement) {
+                            // 이미 완주한 말은 결승선에 맞춰 정확히 재조정
+                            if (horse.finishedDisplayed) {
+                                const horseIconOffset = 45; // 말 아이콘 위치 (약 45px 정도 떨어진 위치)
+                                
+                                // 트랜지션 효과 제거하여 즉시 위치 변경
+                                horseElement.style.removeProperty('transition');
+                                
+                                // 결승선 위치에 정확히 고정
+                                horse.position = GLOBAL_TRACK_WIDTH - horseIconOffset;
+                                horseElement.style.left = `${GLOBAL_TRACK_WIDTH - horseIconOffset + 40}px`;
+                            } else {
+                                // 진행 중인 말은 비율에 맞게 조정
+                                const ratio = newTrackWidth / oldTrackWidth;
+                                horse.position = horse.position * ratio;
+                                
+                                // 애니메이션 효과 제거하여 즉시 위치 변경
+                                horseElement.style.removeProperty('transition');
+                                horseElement.style.left = `${horse.position + 40}px`;
+                                
+                                // 약간의 지연 후 애니메이션 효과 복원
+                                setTimeout(() => {
+                                    if (!horse.finishedDisplayed) {
+                                        horseElement.style.transition = 'left 0.15s linear';
+                                    }
+                                }, 50);
+                            }
+                        }
+                    });
                 }
-            });
+            }, 100); // 100ms 디바운스
         });
         
         // 초기 타이머 모드를 서버 동기화로 설정
@@ -1956,6 +2058,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('말 렌더링 다시 시도...');
             renderHorses();
         }, 1000);
+        
+        // 연결된 소켓에 사용자 정보 설정
+        if (socket && currentUser) {
+            socket.emit('set_user_info', {
+                username: currentUser.username,
+                userId: currentUser.id || 'local_user',
+                isGuest: currentUser.isGuest || false,
+                isLocalUser: true,
+                balance: currentUser.balance
+            });
+            console.log('초기화 시 소켓에 사용자 정보 설정:', currentUser.username, '게스트 여부:', currentUser.isGuest);
+        }
     }
     
     // 소켓 이벤트 리스너 설정
@@ -2036,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 말 데이터 업데이트
             if (data.horses && data.horses.length > 0) {
-                // 새로운 말 데이터를 기존 데이터와 병합합니다.
+                // 새로운 말 데이터를 기존 데이터와 병합
                 // 이렇게 하면 기존 말 정보가 보존됩니다.
                 if (horses && horses.length > 0 && data.phase === 'betting') {
                     data.horses.forEach((newHorse, index) => {
@@ -2088,7 +2202,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     horsesFrameData = data.horsesFrameData;
                 }
                 
-                // 새로고침 후 경기 중이라면, 진행 상황에 맞게 애니메이션 다시 시작
+                // 새로고침 후 경기 중이라면, 진행 상황에 맞게 애니메이션 다시 시작 (바로 새로고침)
                 if (gamePhase === 'racing' && data.racingElapsedTime !== undefined) {
                     // 이전에 진행 중이던 애니메이션 정리
                     if (raceAnimationId) {
@@ -2107,8 +2221,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     localTimerStart = Date.now() - data.racingElapsedTime;
                     localRaceStartTime = Date.now() - data.racingElapsedTime;
                     
-                    // 애니메이션 재시작 (현재 프레임부터)
+                    // 애니메이션 즉시 재시작 (현재 프레임부터)
                     console.log(`레이싱 애니메이션 재시작, 경과 시간: ${data.racingElapsedTime}ms, 프레임: ${currentFrame}`);
+                    
+                    // 즉시 애니메이션 재시작 (현재 상태 바로 반영)
                     animateRace(currentFrame);
                 }
             }
@@ -2132,6 +2248,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // 소켓 연결 이벤트
         socket.on('connect', function() {
             console.log('서버에 연결되었습니다.');
+            
+            // 연결 시 사용자 정보 설정
+            if (currentUser && currentUser.username) {
+                console.log('소켓에 사용자 정보 설정:', currentUser.username, '게스트 여부:', currentUser.isGuest);
+                socket.emit('set_user_info', {
+                    username: currentUser.username,
+                    userId: currentUser.id || 'local_user',
+                    isGuest: currentUser.isGuest || false,
+                    isLocalUser: true
+                });
+            }
+            
             syncServerTime();
         });
         
@@ -2285,6 +2413,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateUserBalance(data.newBalance);
                 alert('베팅이 성공적으로 완료되었습니다!');
             } else {
+                // 실패 시 클라이언트에서 차감한 금액 복구
+                if (currentBets.length > 0) {
+                    const lastBet = currentBets[currentBets.length - 1];
+                    updateUserBalance(currentUser.balance + lastBet.amount);
+                    
+                    // 마지막 베팅 제거
+                    currentBets.pop();
+                    updateBetsUI();
+                }
+                
                 alert('베팅 실패: ' + data.message);
             }
         });
@@ -2360,6 +2498,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span class="lane-horse-name">${horse.name}</span>
                                         <span class="lane-finish-rank">${finishedHorseCount}위</span>
                                         <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
+                                        <span class="lane-horse-odds">${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}배</span>
                                     `;
                                     raceLane.appendChild(laneResultElement);
                                 }
@@ -2483,12 +2622,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const trackWidth = raceTrack.clientWidth - FINISH_LINE_OFFSET - 40;
         
         // 유효하지 않은 값이면 기본값 적용
-        const validWidth = trackWidth > 0 ? trackWidth : 1000;
+        const validWidth = (trackWidth > 100) ? trackWidth : 1000;
         
-        // 글로벌 변수에 저장하여 모든 곳에서 일관된 값 사용
-        GLOBAL_TRACK_WIDTH = validWidth;
+        // 변경된 폭이 기존 폭과 10px 이상 차이가 있을 때만 업데이트
+        // 이렇게 하면 창 크기가 약간 변경될 때 불필요한 업데이트를 방지합니다
+        if (!GLOBAL_TRACK_WIDTH || Math.abs(GLOBAL_TRACK_WIDTH - validWidth) > 10) {
+            // 글로벌 변수에 저장하여 모든 곳에서 일관된 값 사용
+            GLOBAL_TRACK_WIDTH = validWidth;
+            console.log('트랙 폭 업데이트:', validWidth, 'px');
+        }
         
-        console.log('트랙 폭 계산:', validWidth, 'px');
         return validWidth;
     }
 
@@ -2522,21 +2665,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log(`${horse.name} 결승선 통과! 시간: ${horse.finishTime.toFixed(2)}초, 순위: ${horse.actualRank}위`);
         
-        // 완주 시간 표시
-        const finishTimeElement = document.getElementById(`finish-time-${horse.id}`);
-        if (finishTimeElement) {
-            finishTimeElement.textContent = `${horse.finishTime.toFixed(2)}초 (${horse.actualRank}위)`;
-            // 실제로 완주한 말만 시간 표시 (경기 중일 때만)
-            if (gamePhase === 'racing') {
-                finishTimeElement.style.display = 'inline-block';
-            }
-        }
+        // 완주 시 애니메이션 및 스타일 처리 개선
+        // 1. 트랜지션 효과 완전히 제거 (움찔거림 방지)
+        horseElement.style.removeProperty('transition');
         
-        // 완주 클래스 추가 (초록색 효과)
-        // 레이싱 단계에서만 애니메이션 효과 적용 (새로고침 후 표시되는 경우 제외)
+        // 2. 정확한 위치에 고정 (결승선 위치)
+        horseElement.style.left = `${GLOBAL_TRACK_WIDTH - horseIconOffset + 40}px`; // 40px는 초기 offset
+        
+        // 3. 애니메이션 추가 (레이싱 단계에서만)
         if (gamePhase === 'racing') {
             horseElement.classList.add('finished');
         }
+        
+        // 4. 결승선 통과 시 말 이름과 배당률 숨기기
+        const horseName = horseElement.querySelector('.horse-name');
+        const horseOdds = horseElement.querySelector('.horse-odds');
+        if (horseName) horseName.style.display = 'none';
+        if (horseOdds) horseOdds.style.display = 'none';
         
         // 레인 요소 가져오기
         const raceLane = horseElement.parentElement;
@@ -2553,12 +2698,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 raceLane.classList.add('third-rank');
             }
             
-            // 레인에 순위 표시 (이미 표시되어 있지 않은 경우에만)
-            if (!raceLane.querySelector('.lane-rank')) {
-                const laneRankElement = document.createElement('div');
-                laneRankElement.className = 'lane-rank';
-                laneRankElement.textContent = `${horse.actualRank}위`;
-                raceLane.appendChild(laneRankElement);
+            // 레인에 결과 표시 (말 이름, 순위, 시간, 배율)
+            if (!raceLane.querySelector('.lane-result')) {
+                const laneResultElement = document.createElement('div');
+                laneResultElement.className = 'lane-result';
+                laneResultElement.innerHTML = `
+                    <span class="lane-horse-name">${horse.name}</span>
+                    <span class="lane-finish-rank">${horse.actualRank}위</span>
+                    <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
+                    <span class="lane-horse-odds">${horse.odds}배</span>
+                `;
+                raceLane.appendChild(laneResultElement);
             }
         }
         

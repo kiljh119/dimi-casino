@@ -262,26 +262,31 @@
         .lane-result {
             position: absolute;
             right: 80px;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
+            top: 0;
+            bottom: 0;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            z-index: 5;
+            justify-content: center;
+            gap: 8px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            z-index: 20;
             animation: fadeIn 0.5s forwards;
+            white-space: nowrap;
+            height: 70%;
+            margin: auto 0;
+            border: 2px solid transparent;
         }
         
         .lane-horse-name {
             font-weight: bold;
-            margin-bottom: 2px;
+            color: #fff;
         }
         
         .lane-finish-rank {
-            color: gold;
             font-weight: bold;
         }
         
@@ -290,20 +295,29 @@
             color: #8eff8e;
         }
         
-        /* 순위별 색상 */
-        .first-rank .lane-rank {
-            background-color: rgba(255, 215, 0, 0.7); /* 금색 */
-            color: #000;
+        .lane-horse-odds {
+            font-size: 0.9em;
+            color: #f9d71c;
+            font-weight: bold;
         }
         
-        .second-rank .lane-rank {
-            background-color: rgba(192, 192, 192, 0.7); /* 은색 */
-            color: #000;
+        /* 등수별 색상 */
+        .first-rank .lane-result {
+            background-color: rgba(255, 215, 0, 0.3); /* 금색 배경 */
+            border-color: rgba(255, 215, 0, 0.8);
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
         }
         
-        .third-rank .lane-rank {
-            background-color: rgba(205, 127, 50, 0.7); /* 동색 */
-            color: #000;
+        .second-rank .lane-result {
+            background-color: rgba(192, 192, 192, 0.3); /* 은색 배경 */
+            border-color: rgba(192, 192, 192, 0.8);
+            box-shadow: 0 0 8px rgba(192, 192, 192, 0.5);
+        }
+        
+        .third-rank .lane-result {
+            background-color: rgba(205, 127, 50, 0.3); /* 동색 배경 */
+            border-color: rgba(205, 127, 50, 0.8);
+            box-shadow: 0 0 8px rgba(205, 127, 50, 0.5);
         }
         
         .finish-line {
@@ -651,6 +665,21 @@
         @keyframes smoothMove {
             0% { transform: translateX(-30px); opacity: 0.7; }
             100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* 결승선 부근 말 움직임 개선을 위한 추가 스타일 */
+        .race-lane .horse.near-finish {
+            /* 결승선 가까이에서는 트랜지션 효과 제거 */
+            transition: none !important;
+            will-change: left;
+        }
+        
+        /* 완주한 말의 위치를 정확히 고정 */
+        .race-lane .horse.finished {
+            /* 결승선에 위치 고정 */
+            transition: none !important;
+            position: absolute;
+            will-change: auto;
         }
     </style>
 </head>
