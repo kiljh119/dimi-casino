@@ -143,19 +143,24 @@
             left: 40px;
             display: flex;
             align-items: center;
-            transition: left 0.3s ease-in-out;
-            z-index: 2;
-            color: white; /* 말 텍스트 색상 */
-            background-color: rgba(0, 0, 0, 0.3); /* 말 배경색 추가 */
+            transition: left 0.2s linear, transform 0.3s ease;
+            z-index: 10;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
             border-radius: 5px;
-            min-width: 80px; /* 최소 너비 설정 */
+            min-width: 80px;
+            will-change: left, transform;
+            white-space: nowrap;
+            min-height: 30px;
+            box-sizing: border-box;
         }
         
         .horse-icon {
             font-size: 24px;
             margin-right: 8px;
             color: #fff;
+            flex-shrink: 0;
         }
         
         .horse-name {
@@ -163,6 +168,14 @@
             color: #fff;
             font-weight: 500;
             margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .horse-odds {
+            font-size: 0.85rem;
+            color: #f9d71c;
+            font-weight: 500;
+            flex-shrink: 0;
         }
         
         /* 완주 시간을 표시하는 요소의 스타일 */
@@ -175,12 +188,19 @@
             border-radius: 4px;
             margin-left: 4px;
             animation: fadeIn 0.5s ease-in-out;
+            flex-shrink: 0;
         }
         
         /* 결승선을 통과한 말에 대한 애니메이션 효과 */
         .horse.finished {
             animation: finishBlink 1.5s ease-in-out;
             background-color: rgba(76, 175, 80, 0.3); /* 초록색 배경으로 변경 */
+        }
+        
+        /* 새로고침 후 나타나는 완주한 말에는 애니메이션을 적용하지 않음 */
+        .race-phase-betting .horse.finished {
+            animation: none;
+            background-color: transparent;
         }
         
         /* 완주 시간이 나타나는 애니메이션 */
@@ -199,7 +219,7 @@
         /* 우승한 말에 대한 특별 효과 애니메이션 */
         @keyframes winner {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
         
@@ -238,6 +258,38 @@
             animation: fadeIn 0.5s ease;
         }
         
+        /* 레인에 표시되는 결과 스타일 */
+        .lane-result {
+            position: absolute;
+            right: 80px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+            animation: fadeIn 0.5s forwards;
+        }
+        
+        .lane-horse-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .lane-finish-rank {
+            color: gold;
+            font-weight: bold;
+        }
+        
+        .lane-finish-time {
+            font-size: 0.9em;
+            color: #8eff8e;
+        }
+        
         /* 순위별 색상 */
         .first-rank .lane-rank {
             background-color: rgba(255, 215, 0, 0.7); /* 금색 */
@@ -267,7 +319,7 @@
                 #000 10px,
                 #000 20px
             );
-            z-index: 1;
+            z-index: 5;
         }
         
         .race-result {
@@ -588,14 +640,17 @@
         
         /* 게임 진행 상태 표시기 스타일 */
         /* 이제 사용하지 않는 별도 race-progress-container 스타일 삭제 */
-        .race-progress-container {
-            /* 삭제 */
-        }
         
         @keyframes blink {
             0% { opacity: 0.6; }
             50% { opacity: 1; }
             100% { opacity: 0.6; }
+        }
+        
+        /* 말이 부드럽게 이동하는 애니메이션 (큰 위치 변화 시) */
+        @keyframes smoothMove {
+            0% { transform: translateX(-30px); opacity: 0.7; }
+            100% { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
