@@ -34,7 +34,6 @@ function getToken() {
 function removeToken() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY); // 사용자 정보도 함께 삭제
-    localStorage.setItem('loggedIn', 'false'); // 로그아웃 시 로그인 상태 플래그 설정
 }
 
 // 사용자 정보 저장
@@ -79,16 +78,6 @@ function saveUserInfo(user) {
         }
         
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
-        
-        // 로그인 상태 플래그 설정
-        const isGuest = userData.isGuest === true || userData.username === '게스트 사용자';
-        if (!isGuest && userData.username) {
-            localStorage.setItem('loggedIn', 'true');
-            console.log('로그인 상태 플래그 설정: true');
-        } else {
-            localStorage.setItem('loggedIn', 'false');
-            console.log('로그인 상태 플래그 설정: false (게스트)');
-        }
     } catch (error) {
         console.error('사용자 정보 저장 오류:', error);
     }

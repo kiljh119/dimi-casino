@@ -1,5 +1,5 @@
 {
-    "name": "바카라넷",
+    "name": "casino-net",
     "version": "1.0.0",
     "description": "로컬 네트워크에서 즐기는 멀티플레이어 바카라 게임",
     "main": "server.js",

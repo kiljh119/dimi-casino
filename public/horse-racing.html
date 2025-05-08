@@ -386,7 +386,7 @@
             margin-bottom: 20px;
         }
         
-        .betting-form, .bet-types {
+        .betting-form {
             flex: 1;
             min-width: 300px;
             background-color: rgba(0, 0, 0, 0.6);
@@ -401,6 +401,15 @@
             color: #f9d71c;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 8px;
+        }
+        
+        .panel-subtitle {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #3bc9db;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
         }
         
         .horse-list {
@@ -570,32 +579,108 @@
         
         .bet-item {
             display: flex;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            align-items: center;
             justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+            border-left: 3px solid #2a3f5f;
+            transition: background-color 0.3s ease;
         }
         
-        .bet-item:last-child {
-            border-bottom: none;
+        .bet-item.bet-win {
+            background-color: rgba(41, 92, 41, 0.8);
+            border-left: 3px solid #4caf50;
         }
         
-        .bet-detail {
+        .bet-item.bet-lose {
+            background-color: rgba(92, 41, 41, 0.8);
+            border-left: 3px solid #f44336;
+        }
+        
+        .bet-item.bet-pending {
+            border-left: 3px solid #ffc107;
+        }
+        
+        .bet-type {
             flex: 1;
+            min-width: 70px;
+            font-weight: bold;
         }
         
-        .bet-detail-type {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.7);
+        .bet-horses {
+            flex: 2;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            min-width: 100px;
         }
         
         .bet-amount {
-            font-weight: bold;
-            color: #f9d71c;
+            flex: 1;
+            text-align: right;
+            min-width: 80px;
         }
         
-        .bet-potential-win {
-            color: #3bc9db;
-            font-size: 0.9rem;
+        .potential-win {
+            flex: 1;
+            text-align: right;
+            color: #8eff8e;
+            min-width: 100px;
+        }
+        
+        .bet-status {
+            flex: 1;
+            text-align: center;
+            min-width: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .bet-status.win {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .bet-status.lose {
+            color: #f44336;
+        }
+        
+        .bet-status.pending {
+            color: #ffc107;
+        }
+        
+        .potential-win.win-amount {
+            color: #ffeb3b;
+            font-weight: bold;
+            animation: pulse 1s infinite alternate;
+        }
+        
+        .cancel-bet-btn {
+            background: #992222;
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 0.8em;
+            transition: background-color 0.2s;
+        }
+        
+        .cancel-bet-btn:hover {
+            background: #cc3333;
+        }
+        
+        /* 베팅 승리 효과 */
+        @keyframes pulse {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
         }
         
         /* 애니메이션 */
@@ -636,31 +721,6 @@
             }
         }
 
-        /* 디버그용 스타일 */
-        .debug-info {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 9999;
-            max-width: 300px;
-            max-height: 200px;
-            overflow: auto;
-        }
-        
-        /* 게임 진행 상태 표시기 스타일 */
-        /* 이제 사용하지 않는 별도 race-progress-container 스타일 삭제 */
-        
-        @keyframes blink {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
-        
         /* 말이 부드럽게 이동하는 애니메이션 (큰 위치 변화 시) */
         @keyframes smoothMove {
             0% { transform: translateX(-30px); opacity: 0.7; }
@@ -680,6 +740,70 @@
             transition: none !important;
             position: absolute;
             will-change: auto;
+        }
+        
+        /* 커스텀 알림 스타일 */
+        #game-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            max-width: 300px;
+            word-wrap: break-word;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #game-notification.info {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        #game-notification.success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #game-notification.error {
+            background-color: #F44336;
+            color: white;
+        }
+        
+        #game-notification.warning {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        /* 게임 진행 상태 표시기 스타일 */
+        
+        @keyframes blink {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* 게임 컨테이너 레이아웃 */
+        .game-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .main-area {
+            flex: 1;
+            min-width: 0; /* overflow 방지 */
+        }
+        
+
+        
+        /* 반응형 레이아웃 */
+        @media (max-width: 1200px) {
+            .game-container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -715,98 +839,102 @@
                 </div>
             </div>
             
-            <div class="race-track">
-                <div class="finish-line"></div>
-                <!-- 트랙 레인은 자바스크립트로 생성됨 -->
-            </div>
-            
-            <div class="race-result" id="race-result-panel">
-                <h3 class="result-title">경기 결과</h3>
-                <ul class="result-list" id="result-list">
-                    <!-- 결과는 자바스크립트로 생성됨 -->
-                </ul>
-            </div>
-            
-            <div class="betting-panel">
-                <div class="betting-form">
-                    <h3 class="panel-title">베팅하기</h3>
-                    
-                    <div class="horse-list" id="horse-list">
-                        <!-- 말 목록은 자바스크립트로 생성됨 -->
+            <div class="game-container">
+                <div class="main-area">
+                    <div class="race-track">
+                        <div class="finish-line"></div>
+                        <!-- 트랙 레인은 자바스크립트로 생성됨 -->
                     </div>
                     
-                    <div class="bet-amount-input">
-                        <input type="number" id="bet-amount" placeholder="베팅 금액 입력" min="100">
+                    <div class="race-result" id="race-result-panel">
+                        <h3 class="result-title">경기 결과</h3>
+                        <ul class="result-list" id="result-list">
+                            <!-- 결과는 자바스크립트로 생성됨 -->
+                        </ul>
                     </div>
                     
-                    <div class="quick-amount-buttons">
-                        <button class="amount-btn" data-amount="100">100</button>
-                        <button class="amount-btn" data-amount="500">500</button>
-                        <button class="amount-btn" data-amount="1000">1,000</button>
-                        <button class="amount-btn" data-amount="5000">5,000</button>
+                    <div class="betting-panel">
+                        <div class="betting-form">
+                            <h3 class="panel-title">베팅하기</h3>
+                            
+                            <h4 class="panel-subtitle">베팅 유형</h4>
+                            <div class="bet-type-options">
+                                <div class="bet-type" data-type="single">
+                                    <div class="bet-type-name">단승</div>
+                                    <div class="bet-type-desc">1등 맞히기</div>
+                                </div>
+                                <div class="bet-type" data-type="place">
+                                    <div class="bet-type-name">복승</div>
+                                    <div class="bet-type-desc">1,2등 순서 무관</div>
+                                </div>
+                                <div class="bet-type" data-type="quinella">
+                                    <div class="bet-type-name">쌍승</div>
+                                    <div class="bet-type-desc">1,2등 정확한 순서</div>
+                                </div>
+                                <div class="bet-type" data-type="trifecta-place">
+                                    <div class="bet-type-name">삼복승</div>
+                                    <div class="bet-type-desc">1~3등 순서 무관</div>
+                                </div>
+                                <div class="bet-type" data-type="trifecta">
+                                    <div class="bet-type-name">삼쌍승</div>
+                                    <div class="bet-type-desc">1~3등 정확한 순서</div>
+                                </div>
+                            </div>
+                            
+                            <div id="multi-selections" class="horse-list" style="display: none;">
+                                <!-- 멀티 선택 말 목록 (쌍승, 삼복승 등에서 사용) -->
+                            </div>
+                            
+                            <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 20px 0;"></div>
+                            
+                            <h4 class="panel-subtitle">말 선택</h4>
+                            
+                            <div class="horse-list" id="horse-list">
+                                <!-- 말 목록은 자바스크립트로 생성됨 -->
+                            </div>
+                            
+                            <div class="bet-amount-input">
+                                <input type="number" id="bet-amount" placeholder="베팅 금액 입력" min="100">
+                            </div>
+                            
+                            <div class="quick-amount-buttons">
+                                <button class="amount-btn" data-amount="100">100</button>
+                                <button class="amount-btn" data-amount="500">500</button>
+                                <button class="amount-btn" data-amount="1000">1,000</button>
+                                <button class="amount-btn" data-amount="5000">5,000</button>
+                            </div>
+                            
+                            <div class="bet-info">
+                                <p class="bet-info-text">
+                                    선택: <span id="selected-horse-text" class="bet-info-value">선택 없음</span>
+                                </p>
+                                <p class="bet-info-text">
+                                    베팅 유형: <span id="selected-bet-type-text" class="bet-info-value">선택 없음</span>
+                                </p>
+                                <p class="bet-info-text">
+                                    배당률: <span id="selected-odds-text" class="bet-info-value">-</span>
+                                </p>
+                                <p class="bet-info-text">
+                                    예상 수익금: <span id="potential-win-text" class="bet-info-value">0원</span>
+                                </p>
+                            </div>
+                            
+                            <button id="place-bet-btn" class="place-bet-btn" disabled>베팅 확정</button>
+                        </div>
                     </div>
                     
-                    <div class="bet-info">
-                        <p class="bet-info-text">
-                            선택: <span id="selected-horse-text" class="bet-info-value">선택 없음</span>
-                        </p>
-                        <p class="bet-info-text">
-                            베팅 유형: <span id="selected-bet-type-text" class="bet-info-value">선택 없음</span>
-                        </p>
-                        <p class="bet-info-text">
-                            배당률: <span id="selected-odds-text" class="bet-info-value">-</span>
-                        </p>
-                        <p class="bet-info-text">
-                            예상 수익금: <span id="potential-win-text" class="bet-info-value">0원</span>
-                        </p>
+                    <div class="current-bets" id="current-bets-panel">
+                        <h3 class="panel-title">내 베팅 내역</h3>
+                        <ul class="bets-list" id="bets-list">
+                            <!-- 베팅 내역은 자바스크립트로 생성됨 -->
+                        </ul>
                     </div>
-                    
-                    <button id="place-bet-btn" class="place-bet-btn" disabled>베팅 확정</button>
                 </div>
                 
-                <div class="bet-types">
-                    <h3 class="panel-title">베팅 유형</h3>
-                    
-                    <div class="bet-type-options">
-                        <div class="bet-type" data-type="single">
-                            <div class="bet-type-name">단승</div>
-                            <div class="bet-type-desc">1등 맞히기</div>
-                        </div>
-                        <div class="bet-type" data-type="place">
-                            <div class="bet-type-name">복승</div>
-                            <div class="bet-type-desc">1,2등 순서 무관</div>
-                        </div>
-                        <div class="bet-type" data-type="quinella">
-                            <div class="bet-type-name">쌍승</div>
-                            <div class="bet-type-desc">1,2등 정확한 순서</div>
-                        </div>
-                        <div class="bet-type" data-type="trifecta-place">
-                            <div class="bet-type-name">삼복승</div>
-                            <div class="bet-type-desc">1~3등 순서 무관</div>
-                        </div>
-                        <div class="bet-type" data-type="trifecta">
-                            <div class="bet-type-name">삼쌍승</div>
-                            <div class="bet-type-desc">1~3등 정확한 순서</div>
-                        </div>
-                    </div>
-                    
-                    <div id="multi-selections" class="horse-list" style="display: none;">
-                        <!-- 멀티 선택 말 목록 (쌍승, 삼복승 등에서 사용) -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="current-bets" id="current-bets-panel">
-                <h3 class="panel-title">내 베팅 내역</h3>
-                <ul class="bets-list" id="bets-list">
-                    <!-- 베팅 내역은 자바스크립트로 생성됨 -->
-                </ul>
+
             </div>
         </div>
     </div>
-    
-    <!-- 디버그 정보 표시 -->
-    <div class="debug-info" id="debug-info"></div>
     
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -827,31 +955,5 @@
         };
     </script>
     <script src="js/horse-racing.js"></script>
-    <script>
-        // 디버그 정보 표시
-        const debugInfo = document.getElementById('debug-info');
-        
-        // 콘솔 로그 오버라이드
-        const originalConsoleLog = console.log;
-        console.log = function() {
-            originalConsoleLog.apply(console, arguments);
-            const args = Array.from(arguments);
-            const message = args.map(arg => 
-                typeof arg === 'object' ? JSON.stringify(arg) : arg
-            ).join(' ');
-            
-            const logLine = document.createElement('div');
-            logLine.textContent = message;
-            debugInfo.appendChild(logLine);
-            
-            // 최대 20개 로그만 유지
-            if (debugInfo.children.length > 20) {
-                debugInfo.removeChild(debugInfo.children[0]);
-            }
-            
-            // 자동 스크롤
-            debugInfo.scrollTop = debugInfo.scrollHeight;
-        };
-    </script>
 </body>
 </html> 

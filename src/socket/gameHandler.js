@@ -660,6 +660,15 @@ function setupGameSocket(io) {
       }
     });
     
+    // 온라인 플레이어 목록 요청 처리
+    socket.on('request_online_players', () => {
+      console.log('온라인 플레이어 목록 요청:', socket.username || socket.id);
+      
+      // 현재 접속자 목록 전송
+      socket.emit('online_players_update', Object.keys(onlinePlayers));
+      console.log('온라인 플레이어 목록 전송 완료:', Object.keys(onlinePlayers).length, '명');
+    });
+    
     // 연결 종료
     socket.on('disconnect', () => {
       console.log('사용자 연결이 종료되었습니다:', socket.id);

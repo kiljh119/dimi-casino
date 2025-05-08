@@ -254,9 +254,28 @@ class ChatSystem {
 
   // 온라인 플레이어 목록 업데이트
   updateOnlinePlayers(players) {
-    if (!this.onlinePlayersList) return;
+    if (!this.onlinePlayersList) {
+      console.error('온라인 플레이어 목록 요소를 찾을 수 없습니다.');
+      return;
+    }
     
+    // 이전 목록 삭제
     this.onlinePlayersList.innerHTML = '';
+    
+    // 플레이어 배열 형식 확인 및 기본값 설정
+    if (!players || !Array.isArray(players)) {
+      console.warn('플레이어 목록이 비어있거나 배열이 아닙니다:', players);
+      players = [];
+    }
+    
+    // 플레이어가 없는 경우 안내 메시지 표시
+    if (players.length === 0) {
+      const emptyItem = document.createElement('li');
+      emptyItem.className = 'no-players';
+      emptyItem.textContent = '접속자가 없습니다';
+      this.onlinePlayersList.appendChild(emptyItem);
+      return;
+    }
     
     players.forEach(player => {
       // XSS 방지를 위해 플레이어 이름 이스케이프
@@ -299,12 +318,17 @@ class ChatSystem {
         onlineIndicator.className = 'online-indicator';
         li.appendChild(onlineIndicator);
         
+        // 공백 추가
+        li.appendChild(document.createTextNode(' '));
+        
         // 사용자 이름 추가
         li.appendChild(document.createTextNode(safePlayerName));
       }
       
       this.onlinePlayersList.appendChild(li);
     });
+
+    console.log('온라인 플레이어 목록 업데이트 완료:', players.length, '명');
   }
 
   // 채팅 기록 요청

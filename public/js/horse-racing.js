@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentBets = []; // 현재 베팅 목록
     let multiSelectedHorses = []; // 복식 베팅용 선택된 말들
     let gameInitialized = false; // 게임 초기화 여부
+    let isBettingInProgress = false; // 베팅 처리 중 상태 플래그
 
     let localTimerMode = false; // 로컬 타이머 모드 (서버 시간 대신 로컬 시간 사용)
     let localTimerStart = 0; // 로컬 타이머 시작 시간
@@ -510,8 +511,17 @@ document.addEventListener('DOMContentLoaded', function() {
             lane.className = 'race-lane';
             
             // 이미 완주한 말인 경우 레인에 순위 표시
-            if (horse.finishTime && horse.actualRank && gamePhase !== 'betting') {
+            if (horse.finishTime && gamePhase !== 'betting' && (gamePhase === 'finished' || horse.finishedDisplayed)) {
+                // 완주 상태 설정
+                horse.finishedDisplayed = true;
                 lane.classList.add('finished-lane');
+                
+                // 순위 정보가 없는 경우 완주 시간으로 계산된 순위 부여
+                if (!horse.actualRank) {
+                    // 완주 시간 기준으로 임시 순위 계산
+                    const finishedHorses = horses.filter(h => h.finishTime && h.finishTime <= horse.finishTime);
+                    horse.actualRank = finishedHorses.length;
+                }
                 
                 // 순위에 따른 색상 적용
                 if (horse.actualRank === 1) {
@@ -550,8 +560,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 베팅 단계에서는 완주 상태 초기화하여 시간 및 등수 표시 제거
                 horse.finishedDisplayed = false;
             }
+            // 준비 단계에서는 초기 위치로 설정
+            else if (gamePhase === 'preparing') {
+                horse.position = 0;
+                horseElement.style.left = '40px';
+                horseElement.style.zIndex = '10';
+                horse.finishedDisplayed = false;
+            }
             // 경기 중인 경우 현재 위치 사용
-            else if (gamePhase === 'racing' || gamePhase === 'preparing') {
+            else if (gamePhase === 'racing' || gamePhase === 'finished') {
                 // 말 위치가 없으면 0으로 초기화
                 if (horse.position === undefined || horse.position === null) {
                     horse.position = 0;
@@ -724,7 +741,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (opt) opt.classList.add('selected');
             } else {
                 console.log('최대 선택 가능 수에 도달했습니다:', maxSelections);
-                alert(`최대 ${maxSelections}마리까지 선택 가능합니다.`);
+                showNotification(`최대 ${maxSelections}마리까지 선택 가능합니다.`, 'warning');
             }
             
             // 복합 베팅을 위한 첫 번째 말을 selectedHorse로 설정
@@ -759,7 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 멀티 선택이 필요한 베팅 유형이면 안내 표시
         if (type === 'quinella' || type === 'trifecta' || type === 'trifecta-place') {
             const maxSelections = type === 'trifecta' || type === 'trifecta-place' ? 3 : 2;
-            alert(`${maxSelections}마리의 말을 선택해주세요.`);
+            showNotification(`${maxSelections}마리의 말을 선택해주세요.`, 'info');
         }
     }
     
@@ -768,12 +785,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const amount = parseInt(betAmountInput.value) || 0;
         
         // 선택된 말 정보 표시
-        if (selectedBetType === 'quinella' || selectedBetType === 'trifecta' || selectedBetType === 'trifecta-place') {
+        if (selectedBetType === 'place' || selectedBetType === 'quinella' || selectedBetType === 'trifecta' || selectedBetType === 'trifecta-place') {
             // 다중 선택 베팅
             const selectedNames = multiSelectedHorses.map(h => h.name).join(', ');
             selectedHorseText.textContent = selectedNames || '선택 없음';
         } else {
-            // 단일 선택 베팅
+            // 단일 선택 베팅 (단승)
             selectedHorseText.textContent = selectedHorse ? selectedHorse.name : '선택 없음';
         }
         
@@ -787,7 +804,9 @@ document.addEventListener('DOMContentLoaded', function() {
             odds = selectedHorse.odds;
             
             // 복합 베팅은 배당률 증가
-            if (selectedBetType === 'quinella' && multiSelectedHorses.length === 2) {
+            if (selectedBetType === 'place' && multiSelectedHorses.length === 2) {
+                odds = (multiSelectedHorses[0].odds + multiSelectedHorses[1].odds) * 0.7;
+            } else if (selectedBetType === 'quinella' && multiSelectedHorses.length === 2) {
                 odds = (multiSelectedHorses[0].odds + multiSelectedHorses[1].odds) * 0.8;
             } else if (selectedBetType === 'trifecta-place' && multiSelectedHorses.length === 3) {
                 odds = (multiSelectedHorses[0].odds + multiSelectedHorses[1].odds + multiSelectedHorses[2].odds) * 0.6;
@@ -806,7 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const isValidBet = amount > 0 && 
                           selectedBetType && 
                           ((selectedBetType === 'single' && selectedHorse) || 
-                           (selectedBetType === 'place' && multiSelectedHorses.length >= 1) || 
+                           (selectedBetType === 'place' && multiSelectedHorses.length === 2) || 
                            (selectedBetType === 'quinella' && multiSelectedHorses.length === 2) || 
                            (selectedBetType === 'trifecta-place' && multiSelectedHorses.length === 3) || 
                            (selectedBetType === 'trifecta' && multiSelectedHorses.length === 3));
@@ -869,115 +888,98 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log(`트랙 폭: ${trackWidth}px, 총 프레임 수: ${numFrames}`);
         
-        // 각 말들의 속도를 계산하여 반드시 RACE_TIME 내에 완주하도록 조정
-        const minTimeToFinish = RACE_TIME * 0.4; // 최소 완주 시간은 24초 (레이스 시간의 40%)
-        const maxTimeToFinish = RACE_TIME * 0.85; // 최대 완주 시간은 51초 (레이스 시간의 85%)
-        
         // 실시간 순위표 초기화
         initializeRankingBoard();
         
-        // 말들의 최종 도착 시간을 미리 결정 (겹치지 않게)
-        const targetFinishTimes = [];
+        // 배당률에 따라 말의 완주 시간 결정
+        const minTimeToFinish = RACE_TIME * 0.45; // 최소 완주 시간은 레이스 시간의 45% (서버와 일치)
+        const maxTimeToFinish = RACE_TIME * 0.85; // 최대 완주 시간은 레이스 시간의 85% (서버와 일치)
         
-        // 배당률에 따라 말의 순위 결정 (낮은 배당률 = 빠른 말)
-        const horsesWithOdds = [...horses].sort((a, b) => a.odds - b.odds);
+        // 배당률을 기준으로 말을 정렬 (낮은 배당률 = 빠른 말)
+        const sortedHorses = [...horses].sort((a, b) => a.odds - b.odds);
         
-        // 각 말마다 겹치지 않는 목표 완주 시간 설정
-        horsesWithOdds.forEach((horse, index) => {
-            // 시간 간격 계산 - 전체 가용 시간을 말 수로 나눔
-            const timeRange = maxTimeToFinish - minTimeToFinish;
-            const timePerHorse = timeRange / horses.length;
+        console.log("말 정렬 결과 (배당률 기준):", sortedHorses.map(h => `${h.name} (${h.odds}배)`).join(", "));
+        
+        // 시간 간격 계산 - 균등한 분배를 위해 전체 가용 시간을 말 수로 나눔
+        const timeRange = maxTimeToFinish - minTimeToFinish;
+        const timeInterval = timeRange / (sortedHorses.length - 1 || 1); // 0으로 나누기 방지
+        
+        // 각 말에 목표 완주 시간 할당
+        sortedHorses.forEach((horse, index) => {
+            // 기본 목표 시간 = 최소 시간 + (인덱스 * 시간 간격)
+            let targetFinishTime = minTimeToFinish + (index * timeInterval);
             
-            // 기본 목표 시간 = 최소 시간 + (인덱스 * 말당 시간) + 약간의 랜덤성
-            const baseFinishTime = minTimeToFinish + (index * timePerHorse);
-            const randomFactor = Math.random() * (timePerHorse * 0.5); // 0 ~ 시간 간격의 절반까지 랜덤성 추가
+            // 약간의 무작위성 추가 (±5% 범위 내에서만 변동)
+            const maxRandom = timeInterval * 0.1; // 최대 변동폭 = 간격의 10%
+            const randomFactor = (Math.random() - 0.5) * 2 * maxRandom;
+            targetFinishTime += randomFactor;
             
-            // 최종 목표 시간 (최대 시간을 넘지 않도록)
-            const targetFinishTime = Math.min(maxTimeToFinish, baseFinishTime + randomFactor);
-            targetFinishTimes.push(targetFinishTime);
+            // 최종 목표 시간 (최소, 최대 범위 내에서 제한)
+            targetFinishTime = Math.max(minTimeToFinish, Math.min(maxTimeToFinish, targetFinishTime));
+            
+            // 이전 말보다 무조건 늦게 도착하도록 보장 (순위 중복 방지)
+            if (index > 0) {
+                const prevHorse = sortedHorses[index - 1];
+                if (targetFinishTime <= prevHorse.targetFinishTime) {
+                    targetFinishTime = prevHorse.targetFinishTime + 0.2; // 최소 0.2초 차이
+                }
+            }
+            
+            // 말 객체에 목표 완주 시간 저장
+            horse.targetFinishTime = targetFinishTime;
+            
+            console.log(`말 '${horse.name}' (배당률: ${horse.odds}배), 목표 완주 시간: ${targetFinishTime.toFixed(2)}초`);
         });
         
-        // 각 말에 대한 위치 프레임 계산
-        horsesWithOdds.forEach((horse, index) => {
+        // 각 말의 전체 레이스 프레임 데이터 생성
+        horses.forEach(horse => {
+            // 기존 프레임 배열 초기화
             horse.frames = [];
             
-            // 목표 완주 시간 설정
-            const finalFinishTime = targetFinishTimes[index];
-            horse.targetFinishTime = finalFinishTime;
+            // 말의 목표 시간이 없으면 배당률 기준으로 설정 (예외 처리)
+            if (!horse.targetFinishTime) {
+                const oddsRatio = (horse.odds - 1.5) / 8.5; // 1.5~10.0 배당률 정규화
+                horse.targetFinishTime = minTimeToFinish + (oddsRatio * (maxTimeToFinish - minTimeToFinish));
+                console.warn(`말 '${horse.name}'의 목표 시간 누락, 배당률 기반으로 설정: ${horse.targetFinishTime.toFixed(2)}초`);
+            }
             
-            // 평균 속도 계산 (트랙 폭 / 완주 시간)
-            const avgSpeed = trackWidth / (finalFinishTime * 60); // 초당 프레임 수 고려
-            
-            console.log(`말 '${horse.name}' 계산: 배당률=${horse.odds}, 목표 완주 시간=${finalFinishTime.toFixed(2)}초, 평균 속도=${avgSpeed.toFixed(2)}px/프레임`);
-            
-            // 기본 속도와 가속도 설정
-            const baseSpeed = avgSpeed * 0.7; // 시작 속도는 평균의 70%
-            const acceleration = avgSpeed * 0.6 / numFrames; // 가속도는 속도를 서서히 증가시키기 위한 값
-            
-            let pos = 0;
-            let speed = baseSpeed;
-            let previousSpeeds = [speed, speed, speed]; // 속도 평활화를 위한 이전 속도 기록
-            
-            for (let i = 0; i < numFrames; i++) {
-                // 시간에 따른 속도 패턴 - 시작은 느리게, 중간은 빠르게, 마지막은 조금 느리게
-                const timeProgress = i / numFrames;
+            // 프레임 배열 생성 (각 프레임마다 말의 x 위치값)
+            for (let frame = 0; frame <= numFrames; frame++) {
+                // 현재 프레임의 게임 경과 시간 (초)
+                const gameTime = frame / 60;
                 
-                // 완주 시간 기반 보정 - 진도가 늦으면 속도 증가, 빠르면 감속
-                const expectedPosition = (i / finalFinishTime / 60) * trackWidth;
-                const speedBoost = expectedPosition > pos ? 1.3 : 0.7; // 뒤처지면 가속, 앞서면 감속
+                // 말의 목표 완주 시간을 기준으로 진행률 계산 (0~1)
+                const progress = Math.min(1.0, gameTime / horse.targetFinishTime);
                 
-                // 기본 가속도에 시간에 따른 변화 추가
-                let currentAcceleration = acceleration * speedBoost;
+                // 베지어 곡선 적용하여 자연스러운 가속/감속 효과
+                const position = calculateBezierCurve(progress) * trackWidth;
                 
-                if (timeProgress < 0.2) {
-                    // 처음 20%는 가속 단계
-                    currentAcceleration = acceleration * 1.8 * speedBoost;
-                } else if (timeProgress > 0.7) {
-                    // 마지막 30%는 약간 감속
-                    currentAcceleration = acceleration * 0.5 * speedBoost;
+                // 프레임 저장
+                horse.frames.push(position);
+            }
+            
+            // 프레임 데이터 유효성 검사 및 보정
+            for (let i = 1; i < horse.frames.length; i++) {
+                // 이전 프레임보다 뒤로 가지 않도록 보정
+                if (horse.frames[i] < horse.frames[i-1]) {
+                    horse.frames[i] = horse.frames[i-1];
                 }
                 
-                // 속도 업데이트 (자연스러운 변화를 위해 약간의 랜덤성 추가)
-                speed += currentAcceleration + (Math.random() * avgSpeed * 0.1 - avgSpeed * 0.05);
-                
-                // 속도 평활화 (갑작스러운 변화 방지)
-                previousSpeeds.push(speed);
-                if (previousSpeeds.length > 3) previousSpeeds.shift();
-                const smoothedSpeed = previousSpeeds.reduce((a, b) => a + b, 0) / previousSpeeds.length;
-                
-                // 최소/최대 속도 제한
-                const limitedSpeed = Math.max(avgSpeed * 0.6, Math.min(avgSpeed * 2.0, smoothedSpeed));
-                
-                // 위치 업데이트
-                pos += limitedSpeed;
-                
-                // 목표 완주 시간에 결승선에 도달하도록 보정
-                const targetFrame = Math.floor(finalFinishTime * 60);
-                if (i === targetFrame - 1) {
-                    pos = trackWidth;
-                }
-                
-                pos = Math.min(pos, trackWidth); // 트랙 끝을 넘지 않도록
-                
-                horse.frames.push(pos);
-                
-                // 결승선 통과 시 완주 시간 기록
-                if (pos >= trackWidth && !horse.finishTime) {
-                    horse.finishTime = i / 60; // 초 단위로 변환
-                    // 완주 시간이 최대 시간을 초과하지 않도록 제한
-                    horse.finishTime = Math.min(horse.finishTime, maxTimeToFinish);
-                    console.log(`시뮬레이션: ${horse.name} 결승선 통과! 시간: ${horse.finishTime.toFixed(2)}초`);
-                    break; // 결승선 통과 후 더 이상 프레임 계산 불필요
+                // 최대 트랙 폭을 넘지 않도록 보정
+                if (horse.frames[i] > trackWidth) {
+                    horse.frames[i] = trackWidth;
                 }
             }
             
-            // 모든 프레임에 대해 항상 위치값이 있도록 보장
-            if (horse.frames.length < numFrames) {
-                const lastPos = horse.frames[horse.frames.length - 1] || trackWidth;
-                while (horse.frames.length < numFrames) {
-                    horse.frames.push(lastPos);
-                }
-            }
+            // 목표 완주 시간을 finishTime으로 설정 (완주 처리용)
+            horse.finishTime = horse.targetFinishTime;
+            
+            // 진행 상태 초기화
+            horse.position = 0;
+            horse.finishedDisplayed = false;
+            horse.actualRank = null;
+            
+            console.log(`말 '${horse.name}' 프레임 데이터 생성 완료: ${horse.frames.length}개 프레임, 목표 시간: ${horse.targetFinishTime.toFixed(2)}초`);
         });
         
         // 완주 시간 기준으로 등수 매기기
@@ -992,6 +994,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 초기화
         finishedHorseCount = 0;
+    }
+    
+    // 베지어 곡선 계산 헬퍼 함수 (부드러운 가속/감속 효과)
+    function calculateBezierCurve(t) {
+        // S자 형태의 3차 베지어 곡선 사용 (자연스러운 가속/감속)
+        // 제어점: P0(0,0), P1(0.25,0.1), P2(0.75,0.9), P3(1,1)
+        const p1y = 0.1;  // 첫 번째 제어점 - 천천히 가속
+        const p2y = 0.9;  // 두 번째 제어점 - 중간에 빠르게 진행하다가 서서히 감속
+        
+        // 3차 베지어 곡선 공식 구현: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+        const mt = 1 - t;           // (1-t)
+        const mt2 = mt * mt;        // (1-t)²
+        const mt3 = mt2 * mt;       // (1-t)³
+        const t2 = t * t;           // t²
+        const t3 = t2 * t;          // t³
+        
+        // P₀ = (0,0)이므로 첫 항은 0
+        // P₃ = (1,1)이므로 마지막 항은 t³
+        return (3 * mt2 * t * p1y) + (3 * mt * t2 * p2y) + t3;
     }
     
     // 실시간 순위표 초기화
@@ -1049,12 +1070,73 @@ document.addEventListener('DOMContentLoaded', function() {
             startRaceProgressBar(elapsedMsForProgress);
         }
         
+        // 새로고침 여부 확인 (시작 프레임이 0이 아니면 새로고침으로 간주)
+        const isRefreshed = startFrame > 0;
+
+        // 새로고침 후 렌더링 최적화를 위한 위치 초기 설정
+        if (isRefreshed) {
+            console.log('새로고침 후 애니메이션 재개, 현재 프레임으로 말 위치 즉시 업데이트');
+            
+            // 서버에서 받은 프레임 데이터가 있는지 확인
+            const hasServerFrameData = horsesFrameData && Object.keys(horsesFrameData).length > 0;
+            
+            // 서버 데이터 로그
+            if (hasServerFrameData) {
+                console.log('서버에서 받은 프레임 데이터 사용, 항목 수:', Object.keys(horsesFrameData).length);
+            } else {
+                console.warn('서버에서 받은 프레임 데이터가 없음');
+            }
+            
+            // 즉시 말 위치 업데이트 (트랜지션 없이)
+            horses.forEach(horse => {
+                updateHorsePosition(horse, frameIndex, true);
+            });
+            
+            // 레이싱 UI가 제대로 표시되었는지 확인
+            showRacingUI();
+        } else {
+            // 새 경기 시작 시 모든 말의 위치를 초기화
+            horses.forEach(horse => {
+                // 위치 초기화
+                horse.position = 0;
+                horse.finishedDisplayed = false;
+                horse.finishTime = null;
+                horse.actualRank = null;
+                
+                // DOM 요소 업데이트
+                const horseElement = document.getElementById(`horse-${horse.id}`);
+                if (horseElement) {
+                    horseElement.style.left = '40px';
+                    horseElement.style.removeProperty('transform');
+                    horseElement.classList.remove('finished', 'near-finish');
+                    
+                    // 이름과 배당률 표시 복원
+                    const horseName = horseElement.querySelector('.horse-name');
+                    const horseOdds = horseElement.querySelector('.horse-odds');
+                    if (horseName) horseName.style.display = '';
+                    if (horseOdds) horseOdds.style.display = '';
+                }
+            });
+            
+            // 초기 프레임 인덱스 강제 설정
+            frameIndex = 0;
+        }
+        
         // 애니메이션 프레임 함수
         function animate() {
-            // 서버 시간 기준으로 현재 프레임 계산
-            const currentServerTime = getServerTime();
-            const elapsedMs = Math.max(0, currentServerTime - raceStartTime);
-            const currentFrameIndex = Math.floor(elapsedMs / (1000 / 60)); // 60fps로 변환
+            // 현재 프레임 계산 - 로컬 타이머 모드인지 확인
+            let currentFrameIndex;
+            
+            if (localTimerMode) {
+                // 로컬 타이머 모드 - 새로고침 후 진행 (서버 시간과 독립적)
+                const elapsedMs = Date.now() - localTimerStart;
+                currentFrameIndex = startFrame + Math.floor(elapsedMs / (1000 / 60));
+            } else {
+                // 서버 시간 기준 모드
+                const currentServerTime = getServerTime();
+                const elapsedMs = Math.max(0, currentServerTime - raceStartTime);
+                currentFrameIndex = Math.floor(elapsedMs / (1000 / 60)); // 60fps로 변환
+            }
             
             // 프레임 인덱스가 유효한지 확인하고 보정
             if (currentFrameIndex < 0) {
@@ -1062,227 +1144,68 @@ document.addEventListener('DOMContentLoaded', function() {
                 frameIndex = 0;
             } else if (currentFrameIndex >= totalFrames) {
                 // 레이스 종료 확인
-                console.log('레이스 완료, 애니메이션 종료');
-                cancelAnimationFrame(raceAnimationId);
+                console.log('레이스 종료 프레임에 도달, 마무리 단계 시작');
                 
-                // 모든 말의 위치를 최종 위치로 고정
-                horses.forEach(horse => {
-                    const horseElement = document.getElementById(`horse-${horse.id}`);
-                    if (horseElement && !horse.finishedDisplayed) {
-                        // 완주 처리 강제 진행
-                        const horseIconOffset = 45; // 말 아이콘 위치 (약 45px 정도 떨어진 위치)
-                        horse.position = GLOBAL_TRACK_WIDTH - horseIconOffset;
-                        horse.finishedDisplayed = true;
+                // 모든 말이 완주했는지 확인
+                const allHorsesFinished = horses.every(horse => horse.finishedDisplayed);
+                
+                if (allHorsesFinished) {
+                    // 모든 말이 완주했으면 애니메이션 종료 및 결과 표시
+                    console.log('모든 말이 완주, 애니메이션 종료');
+                    cancelAnimationFrame(raceAnimationId);
+                    finishRace();
+                    return;
+                } else {
+                    // 아직 완주하지 않은 말이 있으면 자연스럽게 이동 계속
+                    // 총 프레임을 초과해도 약간의 여유를 두고 계속 진행 (최대 10초 추가)
+                    const maxExtraFrames = 10 * 60; // 10초, 60fps
+                    
+                    // 추가 프레임을 초과했는지 확인
+                    if (currentFrameIndex > totalFrames + maxExtraFrames) {
+                        // 추가 시간도 초과했으면 레이스 마무리
+                        console.log('추가 시간 초과, 남은 말도 강제 완주 처리');
                         
-                        // 말 위치를 고정시키고 트랜지션 효과 제거
-                        horseElement.style.transition = 'none';
-                        horseElement.style.left = `${GLOBAL_TRACK_WIDTH - horseIconOffset + 40}px`;
-                        horseElement.style.transform = 'translateX(0)';
+                        // 완주하지 않은 말들을 강제로 결승선으로 이동
+                        const unfinishedHorses = horses.filter(horse => !horse.finishedDisplayed);
+                        unfinishedHorses.forEach(horse => {
+                            // 현재 위치 저장
+                            const lastPosition = horse.position || 0;
+                            // 서버 위치 정보 업데이트 (결승선 직전으로)
+                            horse.serverPosition = GLOBAL_TRACK_WIDTH - 50;
+                            
+                            // 한 번에 너무 많이 이동하지 않도록 점진적 이동
+                            const distanceToFinish = horse.serverPosition - lastPosition;
+                            if (distanceToFinish > 100) {
+                                // 긴 거리를 이동해야 하면 중간 지점으로 먼저 이동
+                                horse.serverPosition = lastPosition + (distanceToFinish * 0.6);
+                            }
+                        });
                     }
-                });
-                
-                return;
+                }
             } else {
                 frameIndex = currentFrameIndex;
             }
             
-                // 각 말 위치 업데이트
-                horses.forEach(horse => {
+            // 각 말 위치 업데이트
+            horses.forEach(horse => {
                 // 이미 완주한 말은 건너뛰기
                 if (horse.finishedDisplayed) return;
-
-                let newPosition = 0;
-                let validFrameData = false;
                 
-                // 서버에서 미리 계산된 프레임 데이터 사용
-                if (horsesFrameData && horsesFrameData[horse.id]) {
-                    const framesArray = horsesFrameData[horse.id];
-                    
-                    // 프레임 데이터가 유효한지 확인
-                    if (Array.isArray(framesArray) && framesArray.length > 0) {
-                        validFrameData = true;
-                        
-                        // 프레임 인덱스가 범위를 벗어나지 않도록 보정
-                        const safeFrameIndex = Math.min(frameIndex, framesArray.length - 1);
-                        
-                        // 이전 위치 저장 (부드러운 전환을 위해)
-                        const previousPosition = horse.position || 0;
-                        
-                        // 새로운 위치 가져오기
-                        newPosition = framesArray[safeFrameIndex];
-                        
-                        // 위치 데이터의 유효성 확인
-                        if (typeof newPosition !== 'number' || isNaN(newPosition)) {
-                            console.warn(`말 ID ${horse.id}의 유효하지 않은 위치 데이터:`, newPosition);
-                            newPosition = previousPosition; // 이전 위치 유지
-                        }
-                        
-                        // 이전 위치와 현재 위치의 급격한 변화 감지 및 처리
-                        const positionChange = newPosition - previousPosition;
-                        
-                        // 일반적인 최대 변화량 계산 (트랙 폭에 비례)
-                        const maxNormalChange = GLOBAL_TRACK_WIDTH * 0.01; // 트랙 폭의 1% 이내 변화는 정상
-                        
-                        // 급격한 변화 감지 (큰 점프가 발생하는 경우)
-                        if (Math.abs(positionChange) > maxNormalChange && previousPosition > 0) {
-                            // 로깅 - 개발 중일 때만 사용
-                            // console.warn(`말 ${horse.name}(ID:${horse.id})의 급격한 위치 변화 감지: ${previousPosition.toFixed(2)} -> ${newPosition.toFixed(2)}, 차이: ${positionChange.toFixed(2)}`);
-                            
-                            // 부드러운 보간 적용 (더 부드럽게 조정)
-                            const dampingFactor = 0.3; // 변화율 30%
-                            newPosition = previousPosition + (positionChange * dampingFactor);
-                        }
-                        
-                        // 결승선을 넘지 않도록 보정
-                        if (previousPosition < GLOBAL_TRACK_WIDTH && newPosition > GLOBAL_TRACK_WIDTH) {
-                            newPosition = GLOBAL_TRACK_WIDTH;
-                        }
-                    }
-                }
-                
-                // 프레임 데이터가 없거나, 유효하지 않고, 아직 완주하지 않은 경우
-                if (!validFrameData && !horse.finishTime) {
-                    // 기본 속도 계산 (배당률 기반 + 랜덤성)
-                    if (!horse.speedData) {
-                        // 배당률 기반 속도 초기화
-                        const weight = 1 / horse.odds;
-                        const targetFinishTime = RACE_TIME * 0.9 - (weight * RACE_TIME * 0.2);
-                        const avgSpeed = GLOBAL_TRACK_WIDTH / (targetFinishTime * 60);
-                        
-                        horse.speedData = {
-                            currentSpeed: avgSpeed * 0.7,
-                            avgSpeed: avgSpeed,
-                            acceleration: avgSpeed * 0.4 / totalFrames,
-                            previousSpeeds: [avgSpeed * 0.7, avgSpeed * 0.7, avgSpeed * 0.7]
-                        };
-                    }
-                    
-                    // 현재 프레임에 맞는 위치 계산
-                    const timeProgress = frameIndex / totalFrames;
-                    let speedMultiplier = 1.0;
-                    
-                    // 시간에 따른 속도 패턴 조정
-                    if (timeProgress < 0.2) {
-                        speedMultiplier = 0.8 + timeProgress;
-                    } else if (timeProgress > 0.7) {
-                        speedMultiplier = 1.2 - ((timeProgress - 0.7) * 0.5);
-                    }
-                    
-                    // 약간의 자연스러운 랜덤성 추가
-                    const randomFactor = Math.random() * 0.2 - 0.1; // ±10% 랜덤성
-                    const moveAmount = (horse.speedData.avgSpeed * speedMultiplier) + 
-                        (randomFactor * horse.speedData.avgSpeed); // 랜덤성 적용
-                    
-                    // 위치 업데이트 (현재 위치에서 계산된 이동량 추가)
-                    newPosition = (horse.position || 0) + moveAmount;
-                    
-                    // 트랙 너비 제한
-                    newPosition = Math.min(newPosition, GLOBAL_TRACK_WIDTH);
-                }
-                
-                // 최종 위치 업데이트
-                horse.position = newPosition;
-                
-                // 결승선 도달 여부 확인
-                const hasReachedFinishLine = newPosition >= GLOBAL_TRACK_WIDTH;
-                
-                // DOM 업데이트 - 위치 및 트랜지션 설정
-                    const horseElement = document.getElementById(`horse-${horse.id}`);
-                    if (horseElement) {
-                    // 결승선 도달 판정 - 말 앞부분(아이콘)이 결승선에 닿았을 때
-                    // 말의 넓이(약 110px)를 고려하여 GLOBAL_TRACK_WIDTH - 45px에 도달했을 때 결승선 통과로 판정
-                    const horseWidth = 110; // 말 요소의 대략적인 너비
-                    const horseIconOffset = 45; // 말 아이콘 위치 (약 45px 정도 떨어진 위치)
-                    const hasReachedFinishLine = newPosition >= (GLOBAL_TRACK_WIDTH - horseIconOffset);
-                    
-                    // 결승선 접근 구간 정의 (결승선으로부터 100px 이내)
-                    const isNearFinishLine = (GLOBAL_TRACK_WIDTH - newPosition) < 100;
-                    
-                    // 결승선에 도달했을 때
-                    if (hasReachedFinishLine) {
-                        // 1. 트랜지션 효과 완전히 제거 (튕김 방지)
-                        horseElement.style.removeProperty('transition');
-                        // 2. 정확히 결승선에 위치시키기 (말의 앞부분이 결승선에 닿도록)
-                        horseElement.style.left = `${GLOBAL_TRACK_WIDTH - horseIconOffset + 40}px`; // 40px는 초기 offset
-                        // 3. 결승선과 겹쳐도 텍스트가 잘 보이도록 설정
-                        horseElement.style.transform = 'translateX(0)';
-                        // 4. 결승선이 말 뒤로 보이도록 z-index 조정
-                        horseElement.style.zIndex = '10';
-                        // 5. 완주 처리 호출
-                        handleHorseFinish(horse, horseElement, frameIndex);
-                    } 
-                    // 결승선 접근 시 - 움직임을 더 부드럽게 하고 움찔거림 방지
-                    else if (isNearFinishLine) {
-                        // 결승선 가까이에서는 트랜지션을 완전히 제거하고 직접 위치 설정
-                        horseElement.style.removeProperty('transition');
-                        horseElement.style.left = `${newPosition + 40}px`; // 40px는 초기 offset
-                        
-                        // near-finish 클래스 추가
-                        horseElement.classList.add('near-finish');
-                        
-                        // 결승선 근처에서 이름표가 결승선과 겹치지 않도록 조정
-                        const distanceToFinish = GLOBAL_TRACK_WIDTH - newPosition;
-                        if (distanceToFinish < 60) {
-                            horseElement.style.transform = 'translateX(-10px)';
-                        } else {
-                            horseElement.style.transform = '';
-                        }
-                        
-                        // z-index 설정
-                        horseElement.style.zIndex = '10';
-                    }
-                    // 일반적인 위치
-                    else {
-                        // 결승선에서 멀어지면 near-finish 클래스 제거
-                        horseElement.classList.remove('near-finish');
-                        
-                        horseElement.style.transition = 'left 0.15s linear';
-                        horseElement.style.left = `${newPosition + 40}px`; // 40px는 초기 offset
-                        horseElement.style.transform = '';
-                        horseElement.style.zIndex = '10';
-                    }
-                    }
-                });
-                
-            // 주기적으로 말 위치 정보를 서버에 전송
-            const currentTime = Date.now();
-            if (currentTime - lastPositionUpdateTime >= positionUpdateInterval && socket.connected) {
-                lastPositionUpdateTime = currentTime;
-                
-                // 각 말의 현재 위치 정보를 서버에 전송
-                horses.forEach(horse => {
-                    if (!horse.finishedDisplayed) { // 아직 완주하지 않은 말만 업데이트
-                        socket.emit('update_horse_position', {
-                            horseId: horse.id,
-                            position: horse.position
-                        });
-                    }
-                });
-            }
+                // 말 위치 업데이트 함수 호출
+                updateHorsePosition(horse, frameIndex, false);
+            });
             
-            // 모든 말이 완주했는지 확인
-            const allFinished = horses.every(horse => horse.finishedDisplayed);
-            if (allFinished) {
-                console.log('모든 말이 완주했습니다. 경기 종료.');
-                
-                // 애니메이션 중지
-                cancelAnimationFrame(raceAnimationId);
-                
-                // 경기 결과 작업을 위한 타이머 설정 (화면에 결과 표시 등에 시간을 줌)
-                setTimeout(() => {
-                    // 결과 산정 및 표시
-                finishRace();
-                }, 1000);
-                
-                return;
-        }
-        
             // 다음 프레임 요청
-        raceAnimationId = requestAnimationFrame(animate);
+            raceAnimationId = requestAnimationFrame(animate);
+            
+            // 순위표 업데이트 (더 자주)
+            updateRankingBoard();
         }
         
-        // 첫 프레임 시작
-        animate();
+        // 애니메이션 시작
+        raceAnimationId = requestAnimationFrame(animate);
+        
+        return raceAnimationId; // 애니메이션 ID 반환
     }
     
     // 실시간 순위표 업데이트
@@ -1356,6 +1279,119 @@ document.addEventListener('DOMContentLoaded', function() {
             hideRaceProgressBar();
         }, 5000);
         
+        // 아직 완주하지 않은 말들 처리
+        const unfinishedHorses = horses.filter(horse => !horse.finishedDisplayed);
+        
+        if (unfinishedHorses.length > 0) {
+            console.log(`레이스 종료 시점에 완주하지 않은 말: ${unfinishedHorses.length}마리`);
+            
+            // 아직 완주하지 않은 말들은 순차적으로 결승선까지 이동 (지연 시간 적용)
+            unfinishedHorses.forEach((horse, index) => {
+                const horseElement = document.getElementById(`horse-${horse.id}`);
+                if (!horseElement) return;
+                
+                // 배당률이 낮은 말이 먼저 도착하도록 정렬 기준 설정
+                const delayBase = index * 400; // 각 말마다 400ms 간격으로 도착
+                
+                // 말의 현재 위치에 따라 추가 지연 설정 (이미 진행된 말이 더 빨리 도착)
+                const currentPos = horse.position || 0;
+                const progressRatio = Math.min(1, currentPos / GLOBAL_TRACK_WIDTH);
+                const progressDelay = (1 - progressRatio) * 1000; // 진행률이 낮을수록 더 지연
+                
+                // 최종 지연 시간 (정렬 인덱스 + 진행률 기반)
+                const delay = delayBase + progressDelay;
+                
+                // 지연 후 이동 시작
+                setTimeout(() => {
+                    // 현재 위치와 목표 위치 (결승선) 사이 거리 계산
+                    const targetPosition = GLOBAL_TRACK_WIDTH - 45; // 말 아이콘 오프셋 고려
+                    const distanceToFinish = targetPosition - currentPos;
+                    
+                    // 거리가 클수록 더 빠르게 이동 (자연스러운 가속)
+                    const animationDuration = Math.min(2.5, Math.max(0.8, distanceToFinish / 250));
+                    
+                    // 트랜지션 설정으로 자연스러운 이동
+                    horseElement.style.transition = `left ${animationDuration}s ease-out`;
+                    
+                    // 완주 위치로 이동
+                    const finalPosition = `${targetPosition + 40}px`; // 40px는 레인 좌측 여백
+                    horseElement.style.left = finalPosition;
+                    
+                    // 위치 정보 업데이트
+                    horse.position = targetPosition;
+                    
+                    // 애니메이션 후 완주 처리 (트랜지션 시간 대기 후)
+                    setTimeout(() => {
+                        // 완주 시간 계산 (레이스 총 시간의 85~95% 범위에서 설정)
+                        if (!horse.finishTime) {
+                            // 인덱스에 따라 완주 시간 차등 부여 (나중에 도착한 말일수록 더 늦은 시간)
+                            const baseTime = RACE_TIME * 0.85;
+                            const maxFinishTime = RACE_TIME * 0.95;
+                            const timeRange = maxFinishTime - baseTime;
+                            const finishTime = baseTime + (index / Math.max(1, unfinishedHorses.length - 1)) * timeRange;
+                            
+                            horse.finishTime = finishTime;
+                        }
+                        
+                        // 완주 처리
+                        horse.finishedDisplayed = true;
+                        
+                        // 순위 계산 (먼저 완주한 말 수 + 1)
+                        const finishedHorseCount = horses.filter(h => h.finishedDisplayed).length;
+                        horse.actualRank = finishedHorseCount;
+                        
+                        // 완주 시 UI 업데이트
+                        // z-index 조정
+                        horseElement.style.zIndex = '10';
+                        
+                        // 이름과 배당률 숨기기
+                        const horseName = horseElement.querySelector('.horse-name');
+                        const horseOdds = horseElement.querySelector('.horse-odds');
+                        if (horseName) horseName.style.display = 'none';
+                        if (horseOdds) horseOdds.style.display = 'none';
+                        
+                        // 레인에 완주 정보 표시
+                        const raceLane = horseElement.parentElement;
+                        if (raceLane) {
+                            // 완주한 레인 스타일 적용
+                            raceLane.classList.add('finished-lane');
+                            
+                            // 순위에 따른 색상 적용
+                            if (horse.actualRank <= 3) {
+                                raceLane.classList.add(`${['first', 'second', 'third'][horse.actualRank - 1]}-rank`);
+                            }
+                            
+                            // 레인에 결과 표시
+                            if (!raceLane.querySelector('.lane-result')) {
+                                const laneResultElement = document.createElement('div');
+                                laneResultElement.className = 'lane-result';
+                                laneResultElement.innerHTML = `
+                                    <span class="lane-horse-name">${horse.name}</span>
+                                    <span class="lane-finish-rank">${horse.actualRank}위</span>
+                                    <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
+                                    <span class="lane-horse-odds">${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}배</span>
+                                `;
+                                raceLane.appendChild(laneResultElement);
+                            }
+                        }
+                        
+                        // 서버에 완주 정보 전송
+                        if (socket.connected) {
+                            socket.emit('update_horse_position', {
+                                horseId: horse.id,
+                                position: horse.position,
+                                finishTime: horse.finishTime,
+                                rank: horse.actualRank
+                            });
+                        }
+                        
+                        // 순위표 업데이트
+                        updateRankingBoard();
+                    }, animationDuration * 1000 + 100);
+                }, delay);
+            });
+        }
+        
         // 최종 말 위치 정보를 서버에 전송
         if (socket.connected) {
             horses.forEach(horse => {
@@ -1370,135 +1406,178 @@ document.addEventListener('DOMContentLoaded', function() {
         // 경기 결과 목록 생성
         resultList.innerHTML = '';
         
-        // 완주 시간에 따라 결과 정렬
-        raceResults = [...horses].sort((a, b) => 
-            (a.finishTime || Infinity) - (b.finishTime || Infinity)
-        );
+        // 순위에 따라 결과 정렬
+        raceResults = [...horses].sort((a, b) => {
+            // 실제 등수 정보가 있으면 등수 기준으로 정렬
+            if (a.actualRank && b.actualRank) {
+                return a.actualRank - b.actualRank;
+            } 
+            // 완주 시간 기준으로 정렬
+            return (a.finishTime || Infinity) - (b.finishTime || Infinity);
+        });
         
         // 완주 시간 최대값 제한
-        const maxTimeToFinish = RACE_TIME * 0.85; // 최대 51초
+        const maxTimeToFinish = RACE_TIME * 0.9; // 최대 54초
         raceResults.forEach(horse => {
             if (horse.finishTime) {
                 horse.finishTime = Math.min(horse.finishTime, maxTimeToFinish);
             }
         });
         
-        raceResults.forEach((horse, index) => {
-            const listItem = document.createElement('li');
-            listItem.className = 'result-item';
-            
-            const rank = document.createElement('span');
-            rank.className = 'result-rank';
-            rank.textContent = `${index + 1}`;
-            
-            const name = document.createElement('span');
-            name.className = 'result-name';
-            name.textContent = horse.name;
-            
-            const time = document.createElement('span');
-            time.className = 'result-time';
-            time.textContent = `${horse.finishTime.toFixed(2)}초`;
-            
-            listItem.appendChild(rank);
-            listItem.appendChild(name);
-            listItem.appendChild(time);
-            
-            resultList.appendChild(listItem);
-            
-            // 1등 말에 애니메이션 효과
-            if (index === 0) {
-                const winnerHorse = document.getElementById(`horse-${horse.id}`);
-                if (winnerHorse) {
-                    winnerHorse.style.animation = 'winner 1s infinite';
-                }
-            }
-        });
+        // 결과 업데이트 시간 지연 (모든 말이 완주할 시간 확보)
+        const resultUpdateDelay = unfinishedHorses.length > 0 ? 3000 : 0;
         
-        // 베팅 결과 확인 및 정산
-        checkBettingResults();
+        setTimeout(() => {
+            raceResults.forEach((horse, index) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'result-item';
+                
+                const rank = document.createElement('span');
+                rank.className = 'result-rank';
+                rank.textContent = `${index + 1}`;
+                
+                const name = document.createElement('span');
+                name.className = 'result-name';
+                name.textContent = horse.name;
+                
+                const time = document.createElement('span');
+                time.className = 'result-time';
+                time.textContent = `${horse.finishTime.toFixed(2)}초`;
+                
+                listItem.appendChild(rank);
+                listItem.appendChild(name);
+                listItem.appendChild(time);
+                
+                resultList.appendChild(listItem);
+                
+                // 1등 말에 애니메이션 효과
+                if (index === 0) {
+                    const winnerHorse = document.getElementById(`horse-${horse.id}`);
+                    if (winnerHorse) {
+                        winnerHorse.style.animation = 'winner 1s infinite';
+                    }
+                }
+            });
+            
+            // 베팅 결과 확인 및 정산
+            checkBettingResults();
+        }, resultUpdateDelay);
     }
     
     // 로컬 스토리지에서 사용자 정보 불러오기
     function loadUserInfo() {
         try {
-            // 로컬 스토리지에서 사용자 정보 가져오기
-            let userData = localStorage.getItem('user');
-            let isLoggedIn = false;
+            // 로컬 스토리지에서 사용자 정보 가져오기 (두 가지 키로 시도)
+            let userData = localStorage.getItem('userInfo') || localStorage.getItem('user');
             
             if (!userData) {
-                console.log('로그인 정보가 없습니다. 게스트 모드로 진행합니다.');
-                const tempUser = {
-                    id: 'local_user_' + Date.now(),
-                    username: '게스트 사용자',
-                    balance: 50000,
-                    isGuest: true
-                };
-                localStorage.setItem('user', JSON.stringify(tempUser));
-                userData = JSON.stringify(tempUser);
-                isLoggedIn = false;
-                localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
-            } else {
-                // 데이터가 있으면 로그인 상태 확인
-                const parsedUser = JSON.parse(userData);
-                if (parsedUser && parsedUser.username && parsedUser.username !== '게스트 사용자' && !parsedUser.isGuest) {
-                    isLoggedIn = true;
-                    localStorage.setItem('loggedIn', 'true'); // 로그인 상태 플래그 설정
-                    console.log('로그인 사용자 정보 로드:', parsedUser.username);
-                } else {
-                    console.log('게스트 사용자 정보 로드');
-                    isLoggedIn = false;
-                    localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
-                }
+                console.log('로그인 정보가 없습니다. 로그인 페이지로 이동합니다.');
+                alert('로그인이 필요합니다.');
+                window.location.href = '/login.html';
+                return false;
             }
             
+            // 데이터 파싱
             currentUser = JSON.parse(userData);
-            console.log('로컬 스토리지 사용자 정보:', currentUser);
             
-            // 사용자 정보가 유효하지 않으면 임시 계정 생성
+            // 사용자 정보가 유효한지 확인
             if (!currentUser || !currentUser.username) {
-                console.error('로그인 정보가 없습니다. 임시 계정을 생성합니다.');
-                currentUser = {
-                    id: 'local_user_' + Date.now(),
-                    username: '게스트 사용자',
-                    balance: 50000,
-                    isGuest: true
-                };
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
-                isLoggedIn = false;
+                console.error('로그인 정보가 유효하지 않습니다.');
+                alert('로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.');
+                window.location.href = '/login.html';
+                return false;
             }
             
-            // 사용자 정보 표시
-            userNameElement.textContent = currentUser.username;
-            updateUserBalance(currentUser.balance);
+            console.log('사용자 정보 로드 완료:', currentUser.username);
             
-            return isLoggedIn;
+            // 소켓 연결이 되어 있으면 사용자 인증
+            authenticateUser();
+            
+            // 사용자 정보 UI 업데이트
+            updateUserInfoUI();
+            
+            return true;
         } catch (e) {
             console.error('저장된 사용자 정보 파싱 오류:', e);
-            // 오류 시 임시 사용자 생성
-            currentUser = {
-                id: 'local_user_' + Date.now(),
-                username: '게스트 사용자',
-                balance: 50000,
-                isGuest: true
-            };
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            localStorage.setItem('loggedIn', 'false'); // 로그인 상태 플래그 설정
-            
-            userNameElement.textContent = currentUser.username;
-            updateUserBalance(currentUser.balance);
-            
+            alert('로그인 정보에 문제가 있습니다. 다시 로그인해 주세요.');
+            window.location.href = '/login.html';
             return false;
         }
     }
-    
+
+    // 사용자 인증 함수
+    function authenticateUser() {
+        if (!socket || !socket.connected || !currentUser) return;
+        
+        console.log('소켓 사용자 인증 시작...');
+        
+        // 인증 요청 보내기
+        socket.emit('authenticate', {
+            userId: currentUser.id,
+            username: currentUser.username,
+            token: currentUser.token || '' // 토큰이 있으면 함께 전송
+        });
+    }
+
+    // 사용자 정보 UI 업데이트
+    function updateUserInfoUI() {
+        if (!currentUser) return;
+        
+        // 이름 표시
+        userNameElement.textContent = currentUser.username;
+        
+        // 잔액 표시
+        let balanceStr = '';
+        if (typeof currentUser.balance === 'number') {
+            balanceStr = currentUser.balance.toLocaleString() + ' 원';
+        } else {
+            balanceStr = '0 원';
+        }
+        userBalanceElement.textContent = balanceStr;
+        
+        console.log('사용자 정보 UI 업데이트:', currentUser.username, balanceStr);
+    }
+
     // 사용자 잔액 업데이트
     function updateUserBalance(balance) {
-        if (currentUser) {
-            currentUser.balance = balance;
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            userBalanceElement.textContent = balance.toLocaleString() + ' 원';
+        if (!currentUser) return;
+        
+        // 잔액이 숫자가 아니면 변환
+        if (typeof balance !== 'number') {
+            balance = parseInt(balance) || 0;
         }
+        
+        // 최소값은 0
+        balance = Math.max(0, balance);
+        
+        // 이전 잔액과 새 잔액 로깅
+        console.log(`사용자 잔액 업데이트: ${currentUser.balance} → ${balance}`);
+        
+        // 사용자 객체 업데이트
+        currentUser.balance = balance;
+        
+        // 로컬 스토리지 업데이트
+        try {
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            
+            // userInfo 키가 있으면 함께 업데이트
+            if (localStorage.getItem('userInfo')) {
+                localStorage.setItem('userInfo', JSON.stringify(currentUser));
+            }
+        } catch (e) {
+            console.error('사용자 정보 저장 오류:', e);
+        }
+        
+        // UI 업데이트
+        userBalanceElement.textContent = balance.toLocaleString() + ' 원';
+    }
+
+    // 사용자 정보 새로고침 요청
+    function refreshUserInfo() {
+        if (!socket || !socket.connected || !currentUser) return;
+        
+        socket.emit('refresh_user_info');
+        console.log('사용자 정보 새로고침 요청됨');
     }
     
     // 베팅 단계 UI 표시
@@ -1597,68 +1676,169 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 베팅 확정 함수
     function placeBet() {
-        if (!selectedHorse || !selectedBetType || gamePhase !== 'betting') {
-            alert('유효한 베팅을 선택해주세요.');
+        // 이미 베팅 진행 중이면 중복 실행 방지
+        if (isBettingInProgress) {
+            console.log('베팅 처리 중입니다. 중복 요청 방지.');
             return;
         }
         
+        // 로그인 상태 확인
+        if (!currentUser || !currentUser.id || currentUser.isGuest) {
+            showNotification('베팅하려면 로그인이 필요합니다.', 'error');
+            return;
+        }
+        
+        // 게임 단계 확인
+        if (gamePhase !== 'betting') {
+            showNotification('현재 베팅 시간이 아닙니다.', 'warning');
+            return;
+        }
+        
+        // 단순 베팅인지 멀티 선택 베팅인지 확인
+        let selectedHorseIds = [];
+        
+        // 선택된 베팅 유형에 따라 말 선택 확인
+        if (selectedBetType === 'single') {
+            // 단일 선택 베팅
+            if (!selectedHorse) {
+                showNotification('베팅할 말을 선택해주세요.', 'warning');
+                return;
+            }
+            selectedHorseIds = [selectedHorse.id];
+        } else if (selectedBetType === 'place') {
+            // 복승 베팅: 단일 말 선택이 아닌 다중 선택으로 변경
+            if (!multiSelectedHorses || multiSelectedHorses.length === 0) {
+                showNotification('베팅할 말을 선택해주세요.', 'warning');
+                return;
+            }
+            
+            if (multiSelectedHorses.length !== 2) {
+                showNotification('복승 베팅에는 2마리의 말을 선택해야 합니다.', 'warning');
+                return;
+            }
+            
+            // 말 ID 배열 생성
+            selectedHorseIds = multiSelectedHorses.map(horse => horse.id);
+        } else {
+            // 기타 멀티 선택 베팅 (쌍승, 삼복승, 삼쌍승)
+            if (!multiSelectedHorses || multiSelectedHorses.length === 0) {
+                showNotification('베팅할 말을 선택해주세요.', 'warning');
+                return;
+            }
+            
+            // 베팅 유형별 필요한, 말 선택 수 확인
+            const requiredHorseCount = {
+                'quinella': 2,      // 쌍승식 - 2마리
+                'trifecta-place': 3, // 삼복승식 - 3마리
+                'trifecta': 3       // 삼쌍승식 - 3마리
+            };
+            
+            const required = requiredHorseCount[selectedBetType] || 1;
+            
+            if (multiSelectedHorses.length !== required) {
+                showNotification(`${getBetTypeName(selectedBetType)} 베팅에는 ${required}마리의 말을 선택해야 합니다.`, 'warning');
+                return;
+            }
+            
+            // 말 ID 배열 생성
+            selectedHorseIds = multiSelectedHorses.map(horse => horse.id);
+        }
+        
+        // 베팅 금액 확인
         const amount = parseInt(betAmountInput.value);
         if (isNaN(amount) || amount <= 0) {
-            alert('유효한 베팅 금액을 입력해주세요.');
+            showNotification('유효한 베팅 금액을 입력해주세요.', 'warning');
             return;
         }
         
-        // 로그인 상태 실시간 확인 (localStorage 직접 체크)
-        const isLoggedInNow = localStorage.getItem("loggedIn") === "true";
-        
-        if (!isLoggedInNow || !currentUser || !currentUser.username || currentUser.username === '게스트 사용자' || currentUser.isGuest) {
-            alert('로그인이 필요합니다.');
+        // 최소 베팅 금액 체크
+        if (amount < 100) {
+            showNotification('최소 베팅 금액은 100원입니다.', 'warning');
             return;
         }
         
+        // 최대 베팅 금액 체크
+        if (amount > 1000000) {
+            showNotification('최대 베팅 금액은 1,000,000원입니다.', 'warning');
+            return;
+        }
+        
+        // 잔액 확인
         if (amount > currentUser.balance) {
-            alert('잔액이 부족합니다.');
+            showNotification('잔액이 부족합니다.', 'error');
             return;
         }
+        
+        // 중복 베팅 확인 (클라이언트 측에서 동일한 베팅 정보가 있는지 확인)
+        const isSameBetExists = currentBets.some(bet => {
+            // 같은 베팅 유형인지 확인
+            const isSameType = bet.type === selectedBetType || bet.betType === selectedBetType;
+            
+            // 같은 말을 선택했는지 확인
+            let isSameHorses = false;
+            if (selectedBetType === 'single' || selectedBetType === 'place') {
+                // 단일 베팅 비교
+                isSameHorses = bet.horses && bet.horses.length === 1 && 
+                              bet.horses[0].id === selectedHorseIds[0];
+            } else {
+                // 다중 베팅 비교 (순서 무관)
+                const betHorseIds = bet.horses ? bet.horses.map(h => h.id).sort() : [];
+                const currentHorseIds = [...selectedHorseIds].sort();
+                isSameHorses = JSON.stringify(betHorseIds) === JSON.stringify(currentHorseIds);
+            }
+            
+            return isSameType && isSameHorses;
+        });
+        
+        if (isSameBetExists) {
+            showNotification('이미 동일한 유형으로 해당 말에 베팅했습니다.', 'warning');
+            return;
+        }
+        
+        // 진행 중 플래그 설정
+        isBettingInProgress = true;
         
         // 베팅 정보 생성
-        const betInfo = {
-            type: selectedBetType,
-            amount: amount,
-            horses: selectedBetType === 'single' ? [selectedHorse] : multiSelectedHorses,
-            odds: parseFloat(selectedOddsText.textContent.replace('x', '')) || selectedHorse.odds,
-            potentialWin: parseInt(potentialWinText.textContent.replace(/,/g, '').replace('원', ''))
+        const betData = {
+            betType: selectedBetType,
+            horseIds: selectedHorseIds,
+            amount: amount
         };
         
-        // 베팅 정보 저장
-        currentBets.push(betInfo);
+        // 베팅 버튼 비활성화 (중복 베팅 방지)
+        placeBetButton.disabled = true;
         
-        // 잔액 업데이트 (즉시 차감)
-        updateUserBalance(currentUser.balance - amount);
+        console.log('베팅 데이터 전송:', betData);
+        
+        // 소켓으로 베팅 요청 전송
+        socket.emit('horse_racing_bet', betData);
+        
+        // 추가적인 베팅 정보 저장 (클라이언트 측)
+        const clientBetInfo = {
+            type: selectedBetType,
+            amount: amount,
+            timestamp: Date.now(),
+            horses: selectedBetType === 'single' || selectedBetType === 'place' ? 
+                    (selectedBetType === 'single' ? [selectedHorse] : multiSelectedHorses) : 
+                    multiSelectedHorses,
+            odds: parseFloat(selectedOddsText.textContent.replace('x', '')) || 
+                  (selectedHorse ? selectedHorse.odds : 0),
+            potentialWin: parseInt(potentialWinText.textContent.replace(/,/g, '').replace('원', '')) || 0,
+            status: 'pending'
+        };
+        
+        // 현재 베팅 목록에 임시 추가
+        currentBets.push(clientBetInfo);
         
         // 베팅 내역 UI 업데이트
         updateBetsUI();
         
-        // 베팅 폼 초기화
-        resetBettingForm();
+        // 5초 후에 베팅 처리 플래그 초기화 (안전장치)
+        setTimeout(() => {
+            isBettingInProgress = false;
+        }, 5000);
         
-        // 서버에 베팅 정보 전송
-        if (serverConnected) {
-            socket.emit('horse_racing_bet', {
-                username: currentUser.username,
-                userId: currentUser.id || 'local_user',
-                isGuest: currentUser.isGuest || false,
-                isLocalUser: true,
-                currentBalance: currentUser.balance,
-                betType: betInfo.type,
-                horseIds: betInfo.horses.map(h => h.id),
-                amount: betInfo.amount
-            });
-        } else {
-            alert('서버 연결이 불안정합니다. 베팅이 정상적으로 처리되지 않을 수 있습니다.');
-        }
-        
-        // 로컬 성공 메시지 제거 - 서버 응답에서 처리
+        // 참고: 실제 베팅 성공/실패는 bet_response 이벤트에서 처리됨
     }
     
     // 베팅 폼 초기화
@@ -1687,47 +1867,104 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 베팅 내역 UI 업데이트
     function updateBetsUI() {
+        const betsList = document.getElementById('bets-list');
+        
+        // 베팅 목록 초기화
         betsList.innerHTML = '';
         
-        currentBets.forEach((bet, index) => {
-            const betItem = document.createElement('li');
-            betItem.className = 'bet-item';
+        // 현재 베팅 패널 표시 여부 설정
+        const betsPanel = document.getElementById('current-bets-panel');
+        if (currentBets && currentBets.length > 0) {
+            betsPanel.style.display = 'block';
+        } else {
+            betsPanel.style.display = 'none';
+            return;
+        }
+        
+        // 각 베팅 내역 아이템 추가
+        currentBets.forEach(bet => {
+            const listItem = document.createElement('li');
+            listItem.className = 'bet-item';
             
-            const betDetail = document.createElement('div');
-            betDetail.className = 'bet-detail';
+            // 베팅 상태에 따른 클래스 추가
+            if (bet.status === 'win') {
+                listItem.classList.add('bet-win');
+            } else if (bet.status === 'lose') {
+                listItem.classList.add('bet-lose');
+            } else if (bet.status === 'pending') {
+                listItem.classList.add('bet-pending');
+            }
             
+            // 베팅 유형
             const betType = document.createElement('div');
-            betType.textContent = getBetTypeName(bet.type) + ': ' + bet.horses.map(h => h.name).join(', ');
+            betType.className = 'bet-type';
+            betType.textContent = getBetTypeName(bet.type || bet.betType);
             
-            const betDetailType = document.createElement('div');
-            betDetailType.className = 'bet-detail-type';
-            betDetailType.textContent = `배당률 ${bet.odds.toFixed(1)}x`;
+            // 베팅 말 정보
+            const betHorses = document.createElement('div');
+            betHorses.className = 'bet-horses';
             
-            betDetail.appendChild(betType);
-            betDetail.appendChild(betDetailType);
+            // 말 목록 생성
+            const horses = bet.horses || [];
+            const horseNames = horses.map(horse => horse.name).join(', ');
+            betHorses.textContent = horseNames || '정보 없음';
             
+            // 베팅 금액
             const betAmount = document.createElement('div');
             betAmount.className = 'bet-amount';
-            betAmount.textContent = bet.amount.toLocaleString() + '원';
+            betAmount.textContent = (bet.amount || 0).toLocaleString() + '원';
             
+            // 예상 수익금
             const potentialWin = document.createElement('div');
-            potentialWin.className = 'bet-potential-win';
-            potentialWin.textContent = '예상: ' + bet.potentialWin.toLocaleString() + '원';
+            potentialWin.className = 'potential-win';
             
-            betItem.appendChild(betDetail);
-            betItem.appendChild(betAmount);
-            betItem.appendChild(potentialWin);
+            // 예상 수익금 계산 (potential_win 또는 potentialWin 속성 사용)
+            const winAmount = bet.potential_win || bet.potentialWin || 0;
+            potentialWin.textContent = winAmount.toLocaleString() + '원';
             
-            betsList.appendChild(betItem);
+            // 상태 표시
+            const betStatus = document.createElement('div');
+            betStatus.className = 'bet-status';
+            
+            // 상태에 따른 텍스트 설정
+            if (bet.status === 'win') {
+                betStatus.textContent = '승리';
+                betStatus.classList.add('win');
+                
+                // 승리 금액 표시
+                if (bet.winAmount) {
+                    potentialWin.textContent = bet.winAmount.toLocaleString() + '원 획득!';
+                    potentialWin.classList.add('win-amount');
+                }
+            } else if (bet.status === 'lose') {
+                betStatus.textContent = '패배';
+                betStatus.classList.add('lose');
+            } else {
+                betStatus.textContent = '진행 중';
+                betStatus.classList.add('pending');
+                
+                // 현재 단계가 베팅 단계이고 서버 베팅 ID가 있으면 취소 버튼 추가
+                if (gamePhase === 'betting' && bet.id) {
+                    const cancelButton = document.createElement('button');
+                    cancelButton.className = 'cancel-bet-btn';
+                    cancelButton.textContent = '취소';
+                    cancelButton.onclick = function() {
+                        cancelBet(bet.id);
+                    };
+                    betStatus.appendChild(cancelButton);
+                }
+            }
+            
+            // 항목에 추가
+            listItem.appendChild(betType);
+            listItem.appendChild(betHorses);
+            listItem.appendChild(betAmount);
+            listItem.appendChild(potentialWin);
+            listItem.appendChild(betStatus);
+            
+            // 목록에 추가
+            betsList.appendChild(listItem);
         });
-        
-        // 베팅 내역이 없으면 메시지 표시
-        if (currentBets.length === 0) {
-            const emptyMessage = document.createElement('li');
-            emptyMessage.className = 'bet-item';
-            emptyMessage.textContent = '아직 베팅 내역이 없습니다.';
-            betsList.appendChild(emptyMessage);
-        }
     }
     
     // 베팅 결과 확인 및 정산
@@ -1783,7 +2020,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 승리 알림
                 setTimeout(() => {
-                    alert(`축하합니다! ${getBetTypeName(bet.type)} 베팅에서 ${winAmount.toLocaleString()}원을 획득했습니다!`);
+                    showNotification(`축하합니다! ${getBetTypeName(bet.type)} 베팅에서 ${winAmount.toLocaleString()}원을 획득했습니다!`, 'success', 5000);
                 }, 1000);
             }
         });
@@ -1958,6 +2195,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('결승선 위치 조정됨:', FINISH_LINE_OFFSET, 'px');
         }
         
+        // 채팅 시스템 초기화 (채팅 패널 삭제로 인해 비활성화)
+        console.log('채팅 패널이 삭제되어 채팅 시스템을 초기화하지 않습니다.');
+        
         // 창 크기 변경 시 트랙 폭 재계산 및 말 위치 조정 (디바운스 적용)
         let resizeTimeout;
         window.addEventListener('resize', function() {
@@ -2075,6 +2315,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             console.log('초기화 시 소켓에 사용자 정보 설정:', currentUser.username, '게스트 여부:', currentUser.isGuest);
         }
+        
+        // 정기적으로 사용자 정보를 동기화하는 타이머 설정 (30초마다)
+        setInterval(() => {
+            if (socket && socket.connected && currentUser) {
+                console.log('정기 사용자 정보 동기화 실행');
+                loadUserInfo();
+            }
+        }, 30000);
     }
     
     // 소켓 이벤트 리스너 설정
@@ -2104,6 +2352,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 gameInitialized = true;
                 initGameCycle();
             }
+        });
+        
+        // 온라인 플레이어 목록 업데이트 (채팅 패널 삭제로 인해 비활성화)
+        socket.on('online_players_update', function(players) {
+            console.log('온라인 플레이어 목록 수신 (사용하지 않음)');
         });
         
         // 경마 게임 상태 응답 처리
@@ -2138,12 +2391,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 단계가 변경된 경우 UI 업데이트
                 if (previousPhase !== gamePhase) {
                     if (gamePhase === 'betting') {
-                showBettingUI();
+                        showBettingUI();
                         hideRaceProgressBar();
                     } else if (gamePhase === 'preparing') {
                         showPreparingUI();
                     } else if (gamePhase === 'racing') {
                         showRacingUI();
+                    } else if (gamePhase === 'finished') {
+                        // 완료 단계 - 결과 표시
+                        showRacingUI();
+                        finishRace();
                     }
                 }
             }
@@ -2156,7 +2413,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 말 데이터 업데이트
             if (data.horses && data.horses.length > 0) {
                 // 새로운 말 데이터를 기존 데이터와 병합
-                // 이렇게 하면 기존 말 정보가 보존됩니다.
                 if (horses && horses.length > 0 && data.phase === 'betting') {
                     data.horses.forEach((newHorse, index) => {
                         const existingHorse = horses.find(h => h.id === newHorse.id);
@@ -2169,6 +2425,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 
+                // 게임 단계가 변경되었고, 베팅이나 준비 단계로 전환된 경우 말 위치 초기화
+                if (previousPhase !== gamePhase && (gamePhase === 'betting' || gamePhase === 'preparing')) {
+                    data.horses.forEach(horse => {
+                        horse.position = 0;
+                        horse.finishedDisplayed = false;
+                        horse.finishTime = null;
+                        horse.actualRank = null;
+                    });
+                }
+                
                 horses = data.horses;
                 
                 // 서버에서 받은 말 위치 정보 업데이트
@@ -2176,7 +2442,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     Object.keys(data.horsesPositions).forEach(horseId => {
                         const horse = horses.find(h => h.id == horseId);
                         if (horse) {
-                            horse.position = data.horsesPositions[horseId];
+                            // 베팅이나 준비 단계에서는 위치를 0으로 강제
+                            if (gamePhase === 'betting' || gamePhase === 'preparing') {
+                                horse.position = 0;
+                            } else {
+                                horse.position = data.horsesPositions[horseId];
+                            }
+                        }
+                    });
+                }
+
+                // 완주 시간 정보 업데이트
+                if (data.horsesFinishTimes) {
+                    Object.keys(data.horsesFinishTimes).forEach(horseId => {
+                        const horse = horses.find(h => h.id == horseId);
+                        if (horse) {
+                            // 베팅이나 준비 단계에서는 완주 시간 초기화
+                            if (gamePhase === 'betting' || gamePhase === 'preparing') {
+                                horse.finishTime = null;
+                                horse.finishedDisplayed = false;
+                            } else {
+                                horse.finishTime = data.horsesFinishTimes[horseId];
+                            }
                         }
                     });
                 }
@@ -2186,67 +2473,136 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderHorseOptions();
             }
             
-            // 레이싱 단계인 경우 말들의 프레임 데이터 설정
-            if (gamePhase === 'racing' || gamePhase === 'preparing') {
-                // 레이스 시작 및 종료 시간 설정
-                if (data.raceStartTime) {
-                    const oldStartTime = raceStartTime;
-                    raceStartTime = data.raceStartTime;
-                    
-                    if (oldStartTime && Math.abs(oldStartTime - raceStartTime) > 1000) {
-                        console.log(`레이스 시작 시간 변경됨: ${new Date(oldStartTime).toLocaleTimeString()} -> ${new Date(raceStartTime).toLocaleTimeString()}`);
-                    }
-                }
+            // 레이싱 시작 및 종료 시간 설정
+            if (data.raceStartTime) {
+                const oldStartTime = raceStartTime;
+                raceStartTime = data.raceStartTime;
                 
-                if (data.raceEndTime) {
-                    raceEndTime = data.raceEndTime;
-                }
-                
-                // 프레임 데이터 설정
-                if (data.horsesFrameData) {
-                    horsesFrameData = data.horsesFrameData;
-                }
-                
-                // 새로고침 후 경기 중이라면, 진행 상황에 맞게 애니메이션 다시 시작 (바로 새로고침)
-                if (gamePhase === 'racing' && data.racingElapsedTime !== undefined) {
-                    // 이전에 진행 중이던 애니메이션 정리
-                    if (raceAnimationId) {
-                        cancelAnimationFrame(raceAnimationId);
-                        raceAnimationId = null;
-                    }
-                    
-                    // 진행 시간에 맞는 프레임 계산 (60fps 기준)
-                    const currentFrame = Math.floor(data.racingElapsedTime / (1000 / 60));
-                    
-                    // 진행 상태바 업데이트
-                    startRaceProgressBar(data.racingElapsedTime);
-                    
-                    // 로컬 타이머 모드 설정
-                    localTimerMode = true;
-                    localTimerStart = Date.now() - data.racingElapsedTime;
-                    localRaceStartTime = Date.now() - data.racingElapsedTime;
-                    
-                    // 애니메이션 즉시 재시작 (현재 프레임부터)
-                    console.log(`레이싱 애니메이션 재시작, 경과 시간: ${data.racingElapsedTime}ms, 프레임: ${currentFrame}`);
-                    
-                    // 즉시 애니메이션 재시작 (현재 상태 바로 반영)
-                    animateRace(currentFrame);
+                if (oldStartTime && Math.abs(oldStartTime - raceStartTime) > 1000) {
+                    console.log(`레이스 시작 시간 변경됨: ${new Date(oldStartTime).toLocaleTimeString()} -> ${new Date(raceStartTime).toLocaleTimeString()}`);
                 }
             }
             
-            // 남은 시간 업데이트
-            if (data.remainingTime !== undefined) {
-                const isRacingPhase = gamePhase === 'racing';
-                updateRemainingTime(data.remainingTime, isRacingPhase);
+            if (data.raceEndTime) {
+                raceEndTime = data.raceEndTime;
             }
             
-            // 결과 데이터 업데이트
+            // 프레임 데이터가 있는 경우 설정 (준비 단계 또는 레이싱 단계)
+            if (data.horsesFrameData && (gamePhase === 'preparing' || gamePhase === 'racing' || gamePhase === 'finished')) {
+                console.log('서버에서 프레임 데이터 수신, 항목 수:', Object.keys(data.horsesFrameData).length);
+                
+                // 프레임 데이터 검증 및 로깅
+                let validFrameDataCount = 0;
+                let totalFrameCount = 0;
+                
+                for (const horseId in data.horsesFrameData) {
+                    if (Array.isArray(data.horsesFrameData[horseId]) && data.horsesFrameData[horseId].length > 0) {
+                        validFrameDataCount++;
+                        totalFrameCount += data.horsesFrameData[horseId].length;
+                    }
+                }
+                
+                console.log(`유효한 프레임 데이터: ${validFrameDataCount}/${Object.keys(data.horsesFrameData).length} 말, 총 프레임 수: ${totalFrameCount}`);
+                
+                // 말별로 프레임 데이터를 말 객체에 복사 (백업)
+                horses.forEach(horse => {
+                    if (data.horsesFrameData[horse.id] && Array.isArray(data.horsesFrameData[horse.id]) && data.horsesFrameData[horse.id].length > 0) {
+                        // 서버 프레임 데이터 저장
+                        horse.frames = [...data.horsesFrameData[horse.id]];
+                        console.log(`말 ${horse.name}(ID:${horse.id})의 프레임 데이터 설정, 프레임 수: ${horse.frames.length}`);
+                    }
+                });
+                
+                // 전역 프레임 데이터 저장
+                horsesFrameData = data.horsesFrameData;
+                
+                // 레이싱 단계인 경우 레이싱 화면으로 전환
+                if (gamePhase === 'racing') {
+                    showRacingUI();
+                    
+                    // 진행 상황에 맞는 애니메이션 시작
+                    if (data.racingElapsedTime !== undefined) {
+                        // 이전에 진행 중이던 애니메이션 정리
+                        if (raceAnimationId) {
+                            cancelAnimationFrame(raceAnimationId);
+                            raceAnimationId = null;
+                        }
+                        
+                        // 진행 시간에 맞는 프레임 계산 (60fps 기준)
+                        const currentFrame = Math.floor(data.racingElapsedTime / (1000 / 60));
+                        
+                        // 레이스 진행 바 표시
+                        startRaceProgressBar(data.racingElapsedTime);
+                        
+                        // 로컬 타이머 모드 설정 (서버 시간과 독립적으로 진행)
+                        localTimerMode = true;
+                        localTimerStart = Date.now() - data.racingElapsedTime;
+                        localRaceStartTime = Date.now() - data.racingElapsedTime;
+                        
+                        console.log(`경주 애니메이션 재시작, 경과 시간: ${data.racingElapsedTime}ms, 프레임: ${currentFrame}, 총 프레임: ${RACE_TIME * 60}`);
+                        
+                        // 경주가 거의 끝났으면 마지막 프레임부터 애니메이션 시작
+                        const raceNearlyFinished = currentFrame > (RACE_TIME * 60 * 0.9); // 90% 이상 진행
+                        
+                        if (raceNearlyFinished) {
+                            console.log('경주가 거의 끝났습니다. 마지막 프레임에서 재시작합니다.');
+                            const lastFrameIndex = RACE_TIME * 60 - 10; // 마지막 10프레임 전부터 시작
+                            animateRace(lastFrameIndex);
+                        }
+                        // 초기 단계(0.5초 미만)에서는 항상 처음부터 시작
+                        else if (data.racingElapsedTime < 500) {
+                            console.log('경주 초기 단계입니다. 처음부터 시작합니다.');
+                            animateRace(0);
+                        }
+                        // 그 외에는 현재 프레임부터 애니메이션 재시작
+                        else {
+                            console.log(`경주 중간 단계입니다. 현재 프레임(${currentFrame})부터 시작합니다.`);
+                            animateRace(currentFrame);
+                        }
+                        
+                        // 남은 시간 타이머 업데이트
+                        const remainingSeconds = Math.max(0, Math.floor((RACE_TIME * 1000 - data.racingElapsedTime) / 1000));
+                        updateRemainingTime(remainingSeconds, true);
+                    } else {
+                        // 경과 시간 정보가 없는 경우, 처음부터 애니메이션 시작
+                        console.log('경과 시간 정보 없음, 처음부터 애니메이션 시작');
+                        animateRace(0);
+                    }
+                } else if (gamePhase === 'finished') {
+                    // 경주가 끝난 경우, 결과 표시
+                    showRacingUI();
+                    
+                    // 모든 말의 위치를 결승선으로 표시
+                    horses.forEach(horse => {
+                        horse.position = GLOBAL_TRACK_WIDTH;
+                        horse.finishedDisplayed = true;
+                    });
+                    
+                    // 말 렌더링 업데이트
+                    renderHorses();
+                    
+                    // 결과가 있으면 결과 표시
+                    if (data.results && data.results.length > 0) {
+                        currentResults = data.results;
+                        updateRaceResult();
+                    }
+                }
+            }
+            
+            // 결과 데이터 업데이트 (경기가 끝났거나 베팅 단계에서 이전 결과를 표시할 때)
             if (data.results && data.results.length > 0) {
-                // 이 부분은 경기가 실제로 끝났을 때만 결과를 표시하도록 수정
-                if (data.phase === 'betting' && data.racingElapsedTime === 0) {
-                    currentResults = data.results;
+                currentResults = data.results;
+                
+                // 경주가 끝났거나 베팅 단계에서 이전 결과를 표시
+                if (gamePhase === 'finished' || (gamePhase === 'betting' && data.racingElapsedTime === 0)) {
                     updateRaceResult();
                 }
+            }
+            
+            // 남은 시간 업데이트 (레이싱 단계에서는 위에서 이미 처리함)
+            if (data.remainingTime !== undefined && gamePhase !== 'racing') {
+                const isRacingPhase = gamePhase === 'racing';
+                updateRemainingTime(data.remainingTime, isRacingPhase);
             }
         });
         
@@ -2254,18 +2610,240 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('connect', function() {
             console.log('서버에 연결되었습니다.');
             
-            // 연결 시 사용자 정보 설정
+            // 연결 시 사용자 정보 설정 (로컬 스토리지 정보 기반)
             if (currentUser && currentUser.username) {
-                console.log('소켓에 사용자 정보 설정:', currentUser.username, '게스트 여부:', currentUser.isGuest);
-                socket.emit('set_user_info', {
-                    username: currentUser.username,
-                    userId: currentUser.id || 'local_user',
-                    isGuest: currentUser.isGuest || false,
-                    isLocalUser: true
-                });
+                console.log('소켓 연결 성공, 사용자 인증 시작:', currentUser.username);
+                authenticateUser();
+                
+                // 서버 시간 동기화 및 게임 상태 요청
+                syncServerTime();
+                requestHorseData();
+            }
+        });
+        
+        // 인증 응답 이벤트
+        socket.on('auth_response', function(data) {
+            console.log('인증 응답 수신:', data);
+            
+            if (data.success) {
+                // 인증 성공
+                console.log('소켓 인증 성공:', data.user ? data.user.username : '알 수 없음');
+                
+                // 사용자 정보 업데이트
+                if (data.user) {
+                    // 기존 사용자 객체에 최신 정보 병합
+                    currentUser = {
+                        ...currentUser,
+                        ...data.user,
+                        authenticated: true
+                    };
+                    
+                    // UI 업데이트
+                    updateUserInfoUI();
+                    
+                    // 로컬 스토리지 업데이트
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    if (localStorage.getItem('userInfo')) {
+                        localStorage.setItem('userInfo', JSON.stringify(currentUser));
+                    }
+                }
+                
+                // 게임 상태 요청
+                requestHorseData();
+            } else {
+                // 인증 실패
+                console.error('소켓 인증 실패:', data.message);
+                
+                // 게스트 모드인지 확인
+                if (data.isGuest) {
+                    console.log('게스트 모드로 연결됨');
+                    currentUser.isGuest = true;
+                    
+                    // 게스트 UI 표시
+                    userNameElement.textContent = '게스트 (베팅 불가)';
+                    userBalanceElement.textContent = '0 원';
+                } else {
+                    // 심각한 인증 오류, 재로그인 필요
+                    alert('인증에 실패했습니다. 다시 로그인해 주세요.');
+                    window.location.href = '/login.html';
+                }
+            }
+        });
+        
+        // 사용자 정보 업데이트 이벤트
+        socket.on('user_info_update', function(data) {
+            console.log('사용자 정보 업데이트 수신:', data);
+            
+            if (data.success && data.user) {
+                console.log('서버에서 사용자 정보 업데이트됨:', data.user.username, '잔액:', data.user.balance);
+                
+                // 잔액만 업데이트 (UI 함께 업데이트)
+                updateUserBalance(data.user.balance);
+                
+                // 전체 사용자 정보 업데이트 (로컬 스토리지 등)
+                currentUser = {
+                    ...currentUser,
+                    ...data.user
+                };
+                
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                if (localStorage.getItem('userInfo')) {
+                    localStorage.setItem('userInfo', JSON.stringify(currentUser));
+                }
+            }
+        });
+        
+        // 사용자 잔액 업데이트 이벤트
+        socket.on('user_balance_update', function(data) {
+            console.log('사용자 잔액 업데이트 이벤트 수신:', data);
+            
+            // 현재 사용자와 일치하는지 확인
+            if (currentUser && data.username && 
+                (data.username.toLowerCase() === currentUser.username.toLowerCase() || 
+                data.userId === currentUser.id)) {
+                
+                // 잔액 업데이트
+                updateUserBalance(data.balance);
+                console.log('잔액 업데이트 완료:', data.balance);
+            }
+        });
+        
+        // 과거 호환성을 위한 balance_update 이벤트 처리
+        socket.on('balance_update', function(data) {
+            console.log('잔액 업데이트 이벤트 수신:', data);
+            
+            // 대소문자 구분 없이 사용자 이름 비교
+            if (currentUser && data.username && 
+                (data.username.toLowerCase() === currentUser.username.toLowerCase() || 
+                data.userId === currentUser.id)) {
+                console.log('사용자 잔액 업데이트:', currentUser.balance, '->', data.balance);
+                updateUserBalance(data.balance);
+            } else {
+                console.log('잔액 업데이트가 현재 사용자와 일치하지 않습니다:', 
+                    '이벤트 사용자=', data.username, 
+                    '현재 사용자=', currentUser ? currentUser.username : '없음');
+            }
+        });
+        
+        // 베팅 응답 이벤트
+        socket.on('bet_response', function(data) {
+            console.log('베팅 응답 수신:', data);
+            
+            // 베팅 처리 플래그 초기화하여 중복 베팅 방지
+            isBettingInProgress = false;
+            
+            // 베팅 버튼 다시 활성화
+            placeBetButton.disabled = false;
+            
+            if (data.success) {
+                // 베팅 성공
+                updateUserBalance(data.newBalance);
+                
+                // 클라이언트 측에서 이미 베팅을 추가했으므로 중복 추가하지 않고
+                // 서버에서 받은 정보로 기존 베팅 정보 업데이트만 수행
+                if (data.bet && data.betId) {
+                    // 가장 최근 추가된 베팅(마지막 항목)을 서버에서 받은 정보로 업데이트
+                    if (currentBets.length > 0) {
+                        const lastBetIndex = currentBets.length - 1;
+                        
+                        // 서버 정보로 업데이트
+                        currentBets[lastBetIndex] = {
+                            ...currentBets[lastBetIndex],
+                            id: data.betId,
+                            ...data.bet
+                        };
+                        
+                        // UI 업데이트
+                        updateBetsUI();
+                    }
+                }
+                
+                showNotification('베팅이 성공적으로 완료되었습니다!', 'success');
+                
+                // 베팅 폼 초기화
+                resetBettingForm();
+            } else {
+                // 베팅 실패
+                showNotification('베팅 실패: ' + data.message, 'error');
+                
+                // 실패 시 UI 베팅 내역에서 제거 (클라이언트에 먼저 추가된 경우)
+                if (currentBets.length > 0) {
+                    // 마지막 베팅 항목 제거 (가장 최근 추가된 것으로 가정)
+                    currentBets.pop();
+                    updateBetsUI();
+                }
+            }
+        });
+        
+        // 베팅 취소 응답 이벤트
+        socket.on('cancel_bet_response', function(data) {
+            console.log('베팅 취소 응답 수신:', data);
+            
+            if (data.success) {
+                // 잔액 업데이트
+                updateUserBalance(data.newBalance);
+                
+                // 베팅 목록에서 제거
+                const betIndex = currentBets.findIndex(bet => bet.id === data.betId);
+                if (betIndex !== -1) {
+                    currentBets.splice(betIndex, 1);
+                    updateBetsUI();
+                }
+                
+                showNotification('베팅이 취소되었습니다.', 'info');
+            } else {
+                showNotification('베팅 취소 실패: ' + data.message, 'error');
+            }
+        });
+        
+        // 경마 베팅 결과 이벤트
+        socket.on('horse_race_winnings', function(data) {
+            console.log('경마 베팅 결과 이벤트 수신:', data);
+            
+            if (!data || (!data.winningBets && !data.losingBets)) {
+                console.log('유효하지 않은 베팅 결과 데이터');
+                return;
             }
             
-            syncServerTime();
+            // 소속 사용자 결과만 처리
+            if (currentUser && data.userId === currentUser.id) {
+                // 현재 게임 UI 상태 저장
+                const currentGamePhase = gamePhase;
+                
+                // 승리한 베팅이 있는 경우 알림 표시
+                if (data.winningBets && data.winningBets.length > 0) {
+                    console.log('승리한 베팅 결과:', data.winningBets);
+                    
+                    // 각 승리 베팅 정보 표시
+                    data.winningBets.forEach(bet => {
+                        const betTypeName = getBetTypeName(bet.betType);
+                        const winAmount = bet.winAmount || 0;
+                        
+                        // 게임 판 전체에 당첨 알림 표시
+                        setTimeout(() => {
+                            showNotification(`축하합니다! ${betTypeName} 베팅에서 ${winAmount.toLocaleString()}원을 획득했습니다!`, 'success', 5000);
+                        }, 1000);
+                    });
+                    
+                    // 잔액 업데이트
+                    if (data.newBalance) {
+                        updateUserBalance(data.newBalance);
+                    }
+                } else if (data.losingBets && data.losingBets.length > 0) {
+                    console.log('패배한 베팅 결과:', data.losingBets.length, '건');
+                    // 필요 시 패배 메시지 표시
+                    // showNotification('아쉽게도 베팅에 실패했습니다.', 'info');
+                }
+                
+                // 현재 베팅 내역 업데이트
+                // 베팅 단계로 돌아온 경우에만 내역 클리어 (베팅 결과는 이전 게임 결과일 수 있음)
+                if (currentGamePhase === 'betting') {
+                    currentBets = [];
+                    updateBetsUI();
+                }
+            } else {
+                console.log('다른 사용자의 베팅 결과 이벤트 무시');
+            }
         });
         
         // 새 경마 게임 시작 이벤트
@@ -2344,10 +2922,56 @@ document.addEventListener('DOMContentLoaded', function() {
             localTimerStart = Date.now();
             localRaceStartTime = Date.now();
             
+            // 게임 단계 업데이트
             gamePhase = 'racing';
+            
+            // 모든 말의 위치와 상태 초기화 (경기 시작 시 위치 재설정)
+            horses.forEach(horse => {
+                horse.position = 0;
+                horse.finishedDisplayed = false;
+                horse.finishTime = null;
+                horse.actualRank = null;
+                
+                // DOM 요소도 초기화
+                const horseElement = document.getElementById(`horse-${horse.id}`);
+                if (horseElement) {
+                    horseElement.style.left = '40px';
+                    horseElement.style.removeProperty('transform');
+                    horseElement.classList.remove('finished', 'near-finish');
+                    
+                    // 완주 관련 시각적 요소 제거
+                    const parent = horseElement.parentElement;
+                    if (parent) {
+                        parent.classList.remove('finished-lane', 'first-rank', 'second-rank', 'third-rank');
+                        const laneResult = parent.querySelector('.lane-result');
+                        if (laneResult) parent.removeChild(laneResult);
+                    }
+                    
+                    // 이름과 배당률 표시 복원
+                    const horseName = horseElement.querySelector('.horse-name');
+                    const horseOdds = horseElement.querySelector('.horse-odds');
+                    if (horseName) horseName.style.display = '';
+                    if (horseOdds) horseOdds.style.display = '';
+                    
+                    // 부드러운 트랜지션 설정
+                    horseElement.style.transition = 'left 0.1s linear';
+                }
+            });
+            
+            // UI 업데이트
             showRacingUI();
             
-            // 경주 애니메이션 시작 (서버에서 미리 계산된 경로 데이터 사용)
+            // 진행 상태 표시줄 초기화 및 시작
+            raceProgressBar.style.width = '0%';
+            raceProgressText.textContent = '경기 시작!';
+            raceProgressPercentage.textContent = '0%';
+            showRaceProgressBar();
+            
+            // 순위표 초기화
+            initializeRankingBoard();
+            
+            // 경주 애니메이션 시작 - 서버에서 업데이트를 받기 전에 간단한 애니메이션만 시작
+            // 실제 위치 업데이트는 race_progress 이벤트에서 처리됨
             animateRace(0);
             
             // 레이싱 시간 전체 동안 타이머 설정
@@ -2389,10 +3013,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('완주 시간 정보 업데이트 완료');
                 }
                 
+                // 서버에서 받은 순위 정보가 있으면 업데이트
+                if (data.horsesRanks) {
+                    Object.keys(data.horsesRanks).forEach(horseId => {
+                        const horse = horses.find(h => h.id === parseInt(horseId));
+                        if (horse) {
+                            horse.actualRank = data.horsesRanks[horseId];
+                            // 완주 표시 설정
+                            if (horse.finishTime) {
+                                horse.finishedDisplayed = true;
+                            }
+                        }
+                    });
+                    console.log('말 순위 정보 업데이트 완료');
+                }
+                
                 // 완주 시간 기준으로 결과 정렬
-                raceResults = [...horses].sort((a, b) => 
-                    (a.finishTime || Infinity) - (b.finishTime || Infinity)
-                );
+                raceResults = [...horses].sort((a, b) => {
+                    // 실제 순위가 있으면 순위 기준 정렬
+                    if (a.actualRank && b.actualRank) {
+                        return a.actualRank - b.actualRank;
+                    }
+                    // 그렇지 않으면 완주 시간 기준 정렬
+                    return (a.finishTime || Infinity) - (b.finishTime || Infinity);
+                });
                 
                 // 애니메이션 중지 (진행 중이었다면)
                 if (raceAnimationId) {
@@ -2407,45 +3051,46 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 잔액 업데이트 이벤트
         socket.on('balance_update', function(data) {
-            if (data.username === currentUser.username) {
+            console.log('잔액 업데이트 이벤트 수신:', data);
+            
+            // 대소문자 구분 없이 사용자 이름 비교
+            if (currentUser && data.username && 
+                (data.username.toLowerCase() === currentUser.username.toLowerCase() || 
+                data.userId === currentUser.id)) {
+                console.log('사용자 잔액 업데이트:', currentUser.balance, '->', data.balance);
                 updateUserBalance(data.balance);
-            }
-        });
-        
-        // 베팅 응답 이벤트
-        socket.on('bet_response', function(data) {
-            if (data.success) {
-                updateUserBalance(data.newBalance);
-                alert('베팅이 성공적으로 완료되었습니다!');
             } else {
-                // 실패 시 클라이언트에서 차감한 금액 복구
-                if (currentBets.length > 0) {
-                    const lastBet = currentBets[currentBets.length - 1];
-                    updateUserBalance(currentUser.balance + lastBet.amount);
-                    
-                    // 마지막 베팅 제거
-                    currentBets.pop();
-                    updateBetsUI();
-                }
-                
-                alert('베팅 실패: ' + data.message);
+                console.log('잔액 업데이트가 현재 사용자와 일치하지 않습니다:', 
+                    '이벤트 사용자=', data.username, 
+                    '현재 사용자=', currentUser ? currentUser.username : '없음');
             }
         });
         
         // 베팅 상금 이벤트
         socket.on('horse_race_winnings', function(data) {
-            console.log('경마 베팅 상금:', data);
+            console.log('경마 베팅 상금 이벤트 수신:', data);
             
             if (data.totalWinnings > 0) {
+                // 기존 잔액과 새 잔액을 로그로 확인
+                console.log('상금 지급으로 잔액 업데이트:', currentUser.balance, '->', data.newBalance);
+                
+                // 사용자 잔액 즉시 업데이트
                 updateUserBalance(data.newBalance);
-                alert(`축하합니다! 총 ${data.totalWinnings.toLocaleString()}원의 상금을 획득했습니다!`);
+                
+                // 2초 후 로컬 스토리지에서 사용자 정보 다시 불러와 동기화
+                setTimeout(() => {
+                    loadUserInfo();
+                    console.log('사용자 정보 다시 로드 완료. 현재 잔액:', currentUser.balance);
+                }, 2000);
+                
+                showNotification(`축하합니다! 총 ${data.totalWinnings.toLocaleString()}원의 상금을 획득했습니다!`, 'success', 5000);
             }
         });
         
         // 연결 오류 처리
         socket.on('connect_error', function(error) {
             console.error('소켓 연결 오류:', error);
-            alert('서버 연결에 실패했습니다. 페이지를 새로고침하세요.');
+            showNotification('서버 연결에 실패했습니다. 페이지를 새로고침하세요.', 'error');
         });
         
         console.log('소켓 이벤트 리스너 설정 완료');
@@ -2516,25 +3161,169 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 경주 진행 상황 업데이트 수신
         socket.on('race_progress', function(data) {
-            if (data && data.horsesPositions && gamePhase === 'racing') {
-                // 말 위치 정보 업데이트
+            // 경주 중이 아니면 무시
+            if (gamePhase !== 'racing') {
+                return;
+            }
+            
+            // 디버깅 정보 (5초마다)
+            const elapsedSeconds = data.elapsedTime ? Math.floor(data.elapsedTime / 1000) : 0;
+            if (elapsedSeconds % 5 === 0) {
+                console.log(`경주 진행 업데이트: ${elapsedSeconds}초 경과, 프레임: ${data.currentFrame || 0}`);
+            }
+            
+            // 말 위치 정보 업데이트
+            if (data.horsesPositions) {
+                // 업데이트된 말 수 카운트
+                let updatedHorseCount = 0;
+                
                 Object.keys(data.horsesPositions).forEach(horseId => {
-                    const horse = horses.find(h => h.id === parseInt(horseId));
+                    // ID를 숫자로 변환
+                    const numericHorseId = parseInt(horseId);
+                    const horse = horses.find(h => h.id === numericHorseId);
+                    
                     if (horse) {
-                        horse.position = data.horsesPositions[horseId];
+                        // 서버에서 받은 위치 저장
+                        const serverPosition = data.horsesPositions[horseId];
                         
-                        // DOM 업데이트
-                        const horseElement = document.getElementById(`horse-${horse.id}`);
-                        if (horseElement) {
-                            horseElement.style.left = `${horse.position + 40}px`; // 40px는 초기 offset
+                        // 말이 완주 상태가 아니고 위치가 변경된 경우만 업데이트
+                        if (!horse.finishedDisplayed && horse.position !== serverPosition) {
+                            // 현재 위치와 서버 위치가 큰 차이가 있는 경우 즉시 위치 업데이트
+                            // 그렇지 않으면 부드럽게 애니메이션
+                            const positionDiff = Math.abs(serverPosition - horse.position);
+                            const needsImmediate = positionDiff > 50; // 50px 이상 차이나면 즉시 이동
+                            
+                            // 위치 업데이트
+                            horse.serverPosition = serverPosition; // 서버 기준 위치 별도 저장
+                            
+                            // DOM 업데이트
+                            const horseElement = document.getElementById(`horse-${horse.id}`);
+                            if (horseElement) {
+                                // 완주 처리
+                                if (serverPosition >= GLOBAL_TRACK_WIDTH - 45) { // 결승선에 도달
+                                    horse.position = serverPosition;
+                                    handleHorseFinish(horse, horseElement, data.currentFrame || 0);
+                                } 
+                                // 일반 위치 업데이트
+                                else {
+                                    // 즉시 이동이 필요한 경우
+                                    if (needsImmediate) {
+                                        horse.position = serverPosition;
+                                        horseElement.style.transition = 'none';
+                                        horseElement.style.left = `${serverPosition + 40}px`; // 40px는 초기 offset
+                                        
+                                        // 다음 프레임에서 트랜지션 복원
+                                        setTimeout(() => {
+                                            if (horseElement && !horse.finishedDisplayed) {
+                                                horseElement.style.transition = 'left 0.1s linear';
+                                            }
+                                        }, 50);
+                                    } 
+                                    // 부드러운 애니메이션이 필요한 경우
+                                    else {
+                                        // 현재 위치와 서버 위치 사이를 부드럽게 보간
+                                        horse.position = serverPosition;
+                                        horseElement.style.transition = 'left 0.1s linear';
+                                        horseElement.style.left = `${serverPosition + 40}px`; // 40px는 초기 offset
+                                    }
+                                }
+                                
+                                updatedHorseCount++;
+                            }
+                        }
+                    }
+                });
+                
+                // 업데이트된 말이 있으면 순위표 갱신
+                if (updatedHorseCount > 0) {
+                    updateRankingBoard();
+                }
+            }
+            
+            // 경과 시간 표시 업데이트
+            if (data.elapsedTime !== undefined) {
+                // 진행 표시줄 업데이트
+                const elapsedMs = data.elapsedTime;
+                const totalMs = RACE_TIME * 1000;
+                const progressPercent = Math.min(100, Math.floor((elapsedMs / totalMs) * 100));
+                
+                // 진행 표시줄이 있으면 업데이트
+                if (raceProgressBar) {
+                    raceProgressBar.style.width = `${progressPercent}%`;
+                    
+                    if (raceProgressPercentage) {
+                        raceProgressPercentage.textContent = `${progressPercent}%`;
+                    }
+                    
+                    // 진행 단계에 따른 텍스트 업데이트
+                    if (raceProgressText) {
+                        if (progressPercent < 25) {
+                            raceProgressText.textContent = '경기 시작!';
+                        } else if (progressPercent < 50) {
+                            raceProgressText.textContent = '흥미진진한 접전!';
+                        } else if (progressPercent < 75) {
+                            raceProgressText.textContent = '결승선이 보입니다!';
+                        } else if (progressPercent < 100) {
+                            raceProgressText.textContent = '마지막 스퍼트!';
+                        } else {
+                            raceProgressText.textContent = '경기 종료!';
+                        }
+                    }
                 }
             }
         });
         
-                // 경과 시간 표시 업데이트
-                if (data.elapsedTime) {
-                    const elapsedSeconds = Math.floor(data.elapsedTime / 1000);
-                    console.log(`경주 진행 중: ${elapsedSeconds}초 경과`);
+        // 말 위치 업데이트 이벤트 처리
+        socket.on('race_positions_update', function(data) {
+            // 경주 중일 때만 위치 업데이트 처리
+            if (gamePhase !== 'racing') return;
+            
+            // 말 위치 정보 업데이트
+            if (data.horsesPositions) {
+                // 각 말의 위치 업데이트
+                horses.forEach(horse => {
+                    if (data.horsesPositions[horse.id] !== undefined) {
+                        // 서버 위치 정보 저장
+                        horse.serverPosition = data.horsesPositions[horse.id];
+                    }
+                });
+            }
+            
+            // 완주 시간 정보 업데이트
+            if (data.horsesFinishTimes) {
+                // 각 말의 완주 시간 업데이트
+                horses.forEach(horse => {
+                    if (data.horsesFinishTimes[horse.id] !== undefined) {
+                        // 완주 처리가 되지 않은 말만 처리
+                        if (!horse.finishedDisplayed) {
+                            // 완주 시간 설정
+                            horse.finishTime = data.horsesFinishTimes[horse.id];
+                            
+                            // 서버에서 완주 처리된 말이면 완주 처리
+                            if (horse.finishTime > 0) {
+                                const horseElement = document.getElementById(`horse-${horse.id}`);
+                                if (horseElement) {
+                                    // 이미 완주 처리된 말이 아니면 완주 처리
+                                    if (!horse.finishedDisplayed) {
+                                        console.log(`서버 완주 정보에 따라 말 '${horse.name}' 완주 처리`);
+                                        handleHorseFinish(horse, horseElement, data.racingElapsedTime / (1000 / 60));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 경주 경과 시간 정보 업데이트
+            if (data.racingElapsedTime !== undefined) {
+                // 경주 경과 시간을 기준으로 남은 시간 업데이트
+                const elapsedSeconds = data.racingElapsedTime / 1000;
+                const remainingSeconds = Math.max(0, RACE_TIME - elapsedSeconds);
+                
+                // 로그 (5초마다 또는 마지막 10초에 출력)
+                if (Math.floor(elapsedSeconds) % 5 === 0 || remainingSeconds <= 10) {
+                    console.log(`경주 경과 시간: ${elapsedSeconds.toFixed(1)}초, 남은 시간: ${remainingSeconds.toFixed(1)}초`);
                 }
             }
         });
@@ -2567,8 +3356,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 준비 단계 진행 상태 표시 시작
-    function startPreparingProgressBar() {
-        // 진행률 표시기 표시 및 초기화
+    function startPreparingProgressBar(remainingTime = 0) {
+        // 진행률 표시기 표시
+        showRaceProgressBar();
+        
+        // 진행률 표시기 초기화
         raceProgressBar.style.width = '0%';
         raceProgressText.textContent = '경주 준비 중...';
         raceProgressPercentage.textContent = '0%';
@@ -2578,11 +3370,35 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(progressInterval);
         }
         
+        // 준비 시작 시간이 유효한지 확인
+        if (!preparingStartTime || preparingStartTime <= 0) {
+            console.warn('유효하지 않은 준비 시작 시간:', preparingStartTime);
+            preparingStartTime = Date.now();
+        }
+        
+        // 레이스 시작 시간이 유효한지 확인
+        if (!raceStartTime || raceStartTime <= 0) {
+            console.warn('유효하지 않은 레이스 시작 시간:', raceStartTime);
+            // 준비 시간을 3초로 가정
+            raceStartTime = preparingStartTime + 3000;
+        }
+        
         // 준비 시작 시간 기준으로 진행률 업데이트 타이머 설정
         progressInterval = setInterval(() => {
             const now = Date.now();
             const elapsedMs = now - preparingStartTime;
             const totalPrepareTime = raceStartTime - preparingStartTime;
+            
+            // 유효하지 않은 시간이면 보정
+            if (totalPrepareTime <= 0) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+                
+                // 즉시 경주 시작으로 진행
+                startRaceProgressBar(0);
+                return;
+            }
+            
             const percentage = Math.min(100, Math.floor((elapsedMs / totalPrepareTime) * 100));
         
             // 진행률 업데이트
@@ -2590,10 +3406,12 @@ document.addEventListener('DOMContentLoaded', function() {
             raceProgressPercentage.textContent = `${percentage}%`;
             
             // 경주 시작 카운트다운
-            const secondsLeft = Math.ceil((raceStartTime - now) / 1000);
-            
-            // 카운트다운 표시 수정 - 3초 이하 카운트다운 효과 제거
-            raceProgressText.textContent = '경주 준비 중...';
+            const timeLeft = Math.ceil((raceStartTime - now) / 1000);
+            if (timeLeft <= 3) {
+                raceProgressText.textContent = `경주 시작 ${timeLeft}초 전...`;
+            } else {
+                raceProgressText.textContent = '경주 준비 중...';
+            }
             
             // 준비 시간이 끝나면 경주 시작
             if (now >= raceStartTime) {
@@ -2602,18 +3420,81 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 경주 진행 상태 표시기 시작 (0초부터)
                 startRaceProgressBar(0);
+                
+                // 게임 상태 업데이트
+                gamePhase = 'racing';
+                showRacingUI();
             }
         }, 100);
     }
 
-    // 추가 CSS 스타일
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
+    // 추가 CSS 스타일을 위한 요소 생성 및 문서에 추가
+    const additionalStyle = document.createElement('style');
+    additionalStyle.textContent = `
+        /* 준비 단계 스타일 */
         .preparing-phase {
             background-color: #FF9800;
         }
+        
+        /* 말의 움직임을 더 부드럽게 만드는 스타일 */
+        .horse {
+            will-change: transform, left; /* GPU 가속 힌트 */
+            transform: translateZ(0);     /* 하드웨어 가속 강제 적용 */
+            transition: left 0.1s linear;  /* 기본 이동 트랜지션 */
+            backface-visibility: hidden;  /* 렌더링 최적화 */
+        }
+        
+        /* 결승선 근처 말 스타일 */
+        .horse.near-finish {
+            transition: left 0.05s linear !important; /* 더 빈번한 업데이트 */
+        }
+        
+        /* 완주한 말 스타일 */
+        .horse.finished {
+            transition: none !important; /* 완주 후 트랜지션 제거 */
+            animation: finishPulse 1.5s ease-in-out; /* 완주 효과 */
+        }
+        
+        /* 1위 말 스타일 */
+        .first-rank .horse {
+            animation: winner 2s infinite !important; /* 우승자 효과 */
+        }
+        
+        /* 레인 결과 표시 애니메이션 */
+        .lane-result {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        /* 완주 효과 애니메이션 */
+        @keyframes finishPulse {
+            0% { transform: translateZ(0) scale(1); }
+            50% { transform: translateZ(0) scale(1.2); }
+            100% { transform: translateZ(0) scale(1); }
+        }
+        
+        /* 페이드인 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 각 레인 우승 표시 향상 */
+        .first-rank {
+            background-color: rgba(255, 215, 0, 0.2) !important;
+            box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        
+        .second-rank {
+            background-color: rgba(192, 192, 192, 0.2) !important;
+            box-shadow: inset 0 0 10px rgba(192, 192, 192, 0.5);
+        }
+        
+        .third-rank {
+            background-color: rgba(205, 127, 50, 0.2) !important;
+            box-shadow: inset 0 0 10px rgba(205, 127, 50, 0.5);
+        }
     `;
-    document.head.appendChild(styleElement);
+    document.head.appendChild(additionalStyle);
     
     // 게임 초기화 호출
     initGame();
@@ -2640,95 +3521,120 @@ document.addEventListener('DOMContentLoaded', function() {
         return validWidth;
     }
 
-    // 별도 함수로 말 완주 처리 분리 (코드 정리 및 중복 방지)
+    // 별도 함수로 말 완주 처리 (코드 정리 및 중복 방지)
     function handleHorseFinish(horse, horseElement, frameIndex) {
-        // 이미 완주한 말은 처리하지 않음
-        if (horse.finishedDisplayed) {
-            return;
-        }
+        if (!horse || !horseElement) return;
         
-        // 완주 처리 표시
+        // 이미 완주 처리된 말이면 무시
+        if (horse.finishedDisplayed) return;
+        
+        console.log(`말 '${horse.name}' 완주!`);
+        
+        // 말 요소에 완주 클래스 추가
+        horseElement.classList.add('finished');
+        horseElement.classList.remove('near-finish');
+        
+        // 완주 시간 계산 (프레임 인덱스 기준)
+        const finishTime = frameIndex / 60; // 60fps 기준으로 초 단위 변환
+        horse.finishTime = horse.targetFinishTime || finishTime;
+        
+        // 완주 상태 표시
         horse.finishedDisplayed = true;
         
-        // 말이 결승선에 정확히 멈추도록 위치 설정
-        const horseIconOffset = 45; // 말 아이콘 위치 (약 45px 정도 떨어진 위치)
-        horse.position = GLOBAL_TRACK_WIDTH - horseIconOffset;
+        // 완주한 말 수 계산 (순위 결정)
+        const finishedHorses = horses.filter(h => h.finishedDisplayed).length;
+        horse.actualRank = finishedHorses;
         
-        // 완주 시간 계산 (초 단위)
-        if (!horse.finishTime) {
-            const elapsedSeconds = frameIndex / 60; // 60fps 기준
-            horse.finishTime = elapsedSeconds;
+        console.log(`말 '${horse.name}' 완주, 시간: ${horse.finishTime.toFixed(2)}초, 순위: ${horse.actualRank}위`);
+        
+        // 완주 시간 표시
+        const finishTimeElement = document.getElementById(`finish-time-${horse.id}`);
+        if (finishTimeElement) {
+            finishTimeElement.textContent = `${horse.finishTime.toFixed(2)}초 (${horse.actualRank}위)`;
+            finishTimeElement.style.display = 'block';
         }
         
-        // 현재까지 완주한 말 수 계산
-        const finishedHorseCount = horses.filter(h => h.finishedDisplayed).length;
-        
-        // 순위 기록
-        if (!horse.actualRank) {
-            horse.actualRank = finishedHorseCount;
-        }
-        
-        console.log(`${horse.name} 결승선 통과! 시간: ${horse.finishTime.toFixed(2)}초, 순위: ${horse.actualRank}위`);
-        
-        // 완주 시 애니메이션 및 스타일 처리 개선
-        // 1. 트랜지션 효과 완전히 제거 (움찔거림 방지)
-        horseElement.style.removeProperty('transition');
-        
-        // 2. 정확한 위치에 고정 (결승선 위치)
-        horseElement.style.left = `${GLOBAL_TRACK_WIDTH - horseIconOffset + 40}px`; // 40px는 초기 offset
-        
-        // 3. 애니메이션 추가 (레이싱 단계에서만)
-        if (gamePhase === 'racing') {
-            horseElement.classList.add('finished');
-        }
-        
-        // 4. 결승선 통과 시 말 이름과 배당률 숨기기
-        const horseName = horseElement.querySelector('.horse-name');
-        const horseOdds = horseElement.querySelector('.horse-odds');
-        if (horseName) horseName.style.display = 'none';
-        if (horseOdds) horseOdds.style.display = 'none';
-        
-        // 레인 요소 가져오기
-        const raceLane = horseElement.parentElement;
-        if (raceLane) {
-            // 완주한 레인 스타일 적용
-            raceLane.classList.add('finished-lane');
+        // 서버에 완주 정보 전송 (서버 연결이 있을 때만)
+        if (socket && socket.connected) {
+            socket.emit('horse_finish', {
+                horseId: horse.id,
+                finishTime: horse.finishTime,
+                rank: horse.actualRank
+            });
             
-            // 순위에 따른 색상 적용
-            if (horse.actualRank === 1) {
-                raceLane.classList.add('first-rank');
-            } else if (horse.actualRank === 2) {
-                raceLane.classList.add('second-rank');
-            } else if (horse.actualRank === 3) {
-                raceLane.classList.add('third-rank');
-            }
-            
-            // 레인에 결과 표시 (말 이름, 순위, 시간, 배율)
-            if (!raceLane.querySelector('.lane-result')) {
-                const laneResultElement = document.createElement('div');
-                laneResultElement.className = 'lane-result';
-                laneResultElement.innerHTML = `
-                    <span class="lane-horse-name">${horse.name}</span>
-                    <span class="lane-finish-rank">${horse.actualRank}위</span>
-                    <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
-                    <span class="lane-horse-odds">${horse.odds}배</span>
-                `;
-                raceLane.appendChild(laneResultElement);
-            }
+            console.log('서버에 완주 정보 전송:', horse.id, horse.finishTime.toFixed(2), horse.actualRank);
         }
+        
+        // 레인 스타일 업데이트
+        updateLaneStyle(horse, horseElement);
         
         // 순위표 업데이트
         updateRankingBoard();
         
-        // 완주 시간 서버에 전송
-        if (socket.connected) {
-            socket.emit('update_horse_position', {
-                horseId: horse.id,
-                position: horse.position,
-                finishTime: horse.finishTime,
-                rank: horse.actualRank
-            });
+        // 경기 결과에 추가 (아직 없는 경우)
+        if (!raceResults.includes(horse)) {
+            // 정확히 결승선을 넘었는지 먼저 확인
+            const finishLine = GLOBAL_TRACK_WIDTH - 45;
+            if (parseFloat(horseElement.style.left) >= finishLine) {
+                raceResults.push(horse);
+                console.log(`말 '${horse.name}' 레이스 결과에 추가됨, 현재 결과 수: ${raceResults.length}`);
+            }
         }
+        
+        // 모든 말이 완주했는지 확인
+        const allHorsesFinished = horses.every(h => h.finishedDisplayed);
+        if (allHorsesFinished) {
+            console.log('모든 말이 완주했습니다. 결과 표시 준비 중...');
+            
+            // 1초 후 결과 패널 표시
+            setTimeout(() => {
+                finishRace();
+            }, 1000);
+        }
+    }
+
+    // 완주한 말의 레인 스타일 업데이트
+    function updateLaneStyle(horse, horseElement) {
+        const raceLane = horseElement.parentElement;
+        if (!raceLane) return;
+        
+        // 완주한 레인 스타일 적용
+        raceLane.classList.add('finished-lane');
+        
+        // 순위에 따른 색상 적용
+        if (horse.actualRank === 1) {
+            raceLane.classList.add('first-rank');
+        } else if (horse.actualRank === 2) {
+            raceLane.classList.add('second-rank');
+        } else if (horse.actualRank === 3) {
+            raceLane.classList.add('third-rank');
+        }
+        
+        // 이미 레인 결과 요소가 있다면 제거
+        const existingResult = raceLane.querySelector('.lane-result');
+        if (existingResult) {
+            raceLane.removeChild(existingResult);
+        }
+        
+        // 레인에 결과 표시
+        const laneResultElement = document.createElement('div');
+        laneResultElement.className = 'lane-result';
+        laneResultElement.innerHTML = `
+            <span class="lane-horse-name">${horse.name}</span>
+            <span class="lane-finish-rank">${horse.actualRank}위</span>
+            <span class="lane-finish-time">${horse.finishTime.toFixed(2)}초</span>
+            <span class="lane-horse-odds">${Number.isInteger(horse.odds) ? horse.odds + '.0' : horse.odds}배</span>
+        `;
+        
+        // 이름과 배당률 숨기기
+        const horseName = horseElement.querySelector('.horse-name');
+        const horseOdds = horseElement.querySelector('.horse-odds');
+        
+        if (horseName) horseName.style.display = 'none';
+        if (horseOdds) horseOdds.style.display = 'none';
+        
+        // 결과 요소 추가
+        raceLane.appendChild(laneResultElement);
     }
 
     // 진행 표시줄 보이기 함수
@@ -2749,5 +3655,244 @@ document.addEventListener('DOMContentLoaded', function() {
             clearInterval(progressInterval);
             progressInterval = null;
         }
+    }
+
+    // 베팅 취소 함수
+    function cancelBet(betId) {
+        // 로그인 상태 확인
+        if (!currentUser || !currentUser.id || currentUser.isGuest) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+        
+        // 게임 단계 확인
+        if (gamePhase !== 'betting') {
+            alert('베팅 단계에서만 취소할 수 있습니다.');
+            return;
+        }
+        
+        // 취소할 베팅 ID 확인
+        if (!betId) {
+            console.error('취소할 베팅 ID가 없습니다.');
+            return;
+        }
+        
+        // 소켓으로 베팅 취소 요청 전송
+        socket.emit('cancel_bet', { betId });
+        
+        console.log('베팅 취소 요청 전송:', betId);
+        
+        // 취소 결과는 cancel_bet_response 이벤트에서 처리됨
+    }
+
+    // 알림 시스템 추가
+    let notificationQueue = [];
+    let notificationDisplayed = false;
+
+    // 알림 표시 함수
+    function showNotification(message, type = 'info', duration = 3000) {
+        // 알림 객체 생성
+        const notification = {
+            message: message,
+            type: type,
+            duration: duration
+        };
+        
+        // 큐에 추가
+        notificationQueue.push(notification);
+        
+        // 알림 처리 시작
+        processNotificationQueue();
+    }
+
+    // 알림 큐 처리 함수
+    function processNotificationQueue() {
+        // 이미 표시 중이거나 큐가 비어있으면 종료
+        if (notificationDisplayed || notificationQueue.length === 0) {
+            return;
+        }
+        
+        // 큐에서 다음 알림 가져오기
+        const notification = notificationQueue.shift();
+        notificationDisplayed = true;
+        
+        // 알림 요소가 없으면 생성
+        let notificationElement = document.getElementById('game-notification');
+        if (!notificationElement) {
+            notificationElement = document.createElement('div');
+            notificationElement.id = 'game-notification';
+            document.body.appendChild(notificationElement);
+            
+            // 스타일 추가
+            const style = document.createElement('style');
+            style.textContent = `
+                #game-notification {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 5px;
+                    font-size: 16px;
+                    z-index: 9999;
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                    max-width: 300px;
+                    word-wrap: break-word;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                #game-notification.info {
+                    background-color: #2196F3;
+                    color: white;
+                }
+                #game-notification.success {
+                    background-color: #4CAF50;
+                    color: white;
+                }
+                #game-notification.error {
+                    background-color: #F44336;
+                    color: white;
+                }
+                #game-notification.warning {
+                    background-color: #FF9800;
+                    color: white;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 알림 내용과 스타일 설정
+        notificationElement.textContent = notification.message;
+        notificationElement.className = notification.type;
+        
+        // 알림 표시
+        notificationElement.style.opacity = '1';
+        
+        // 지정된 시간 후에 알림 숨김
+        setTimeout(() => {
+            notificationElement.style.opacity = '0';
+            // 알림이 사라진 후 플래그 초기화 및 다음 알림 처리
+            setTimeout(() => {
+                notificationDisplayed = false;
+                processNotificationQueue();
+            }, 300); // 페이드 아웃 트랜지션 시간
+        }, notification.duration);
+    }
+
+    // 개별 말 위치 업데이트 함수 (새로 작성)
+    function updateHorsePosition(horse, currentFrameIndex, isImmediate = false) {
+        if (!horse) return;
+        
+        // 말 요소 찾기
+        const horseElement = document.getElementById(`horse-${horse.id}`);
+        if (!horseElement) return;
+        
+        // 완주한 말은 건너뛰기
+        if (horse.finishedDisplayed) return;
+        
+        // 현재 위치 가져오기 (NaN 방지)
+        const currentPosition = parseFloat(horseElement.style.left?.replace("px", "")) || 40;
+        
+        let targetPosition = 0;
+        
+        // 프레임 인덱스가 유효한지 확인 (최대 프레임 인덱스 = RACE_TIME * 60)
+        const validFrameIndex = Math.min(currentFrameIndex, RACE_TIME * 60 - 1);
+        if (validFrameIndex < 0) {
+            targetPosition = 40; // 시작 위치
+        } 
+        // 서버 프레임 데이터 확인
+        else if (horse.frames && Array.isArray(horse.frames) && validFrameIndex < horse.frames.length) {
+            // 프레임 데이터에서 위치 가져오기
+            targetPosition = horse.frames[validFrameIndex] + 40; // 40px은 레인 좌측 여백
+        } else if (horsesFrameData && horsesFrameData[horse.id] && 
+                   Array.isArray(horsesFrameData[horse.id]) && 
+                   validFrameIndex < horsesFrameData[horse.id].length) {
+            // 전역 프레임 데이터에서 위치 가져오기
+            targetPosition = horsesFrameData[horse.id][validFrameIndex] + 40;
+        } else if (horse.serverPosition !== undefined) {
+            // 서버 위치 데이터가 있으면 사용
+            targetPosition = horse.serverPosition + 40;
+        } else {
+            // 프레임 데이터가 없는 경우, 배당률 기반으로 위치 계산
+            // 배당률이 낮을수록 빠른 속도로 이동
+            const speedFactor = 1 / Math.max(1, horse.odds);
+            const maxSpeed = 5;
+            const baseSpeed = 2;
+            const speed = baseSpeed + (speedFactor * maxSpeed);
+            
+            // 현재 프레임 위치에 맞게 위치 계산
+            const frameProgress = Math.min(1.0, validFrameIndex / (RACE_TIME * 60));
+            const targetProgress = calculateBezierCurve(frameProgress);
+            targetPosition = targetProgress * GLOBAL_TRACK_WIDTH + 40;
+        }
+        
+        // 현재 위치와 목표 위치의 차이가 너무 크면(순간이동 방지)
+        const maxJump = 30; // 최대 허용 이동 거리
+        if (Math.abs(targetPosition - currentPosition) > maxJump && !isImmediate) {
+            // 최대 이동 거리로 제한
+            if (targetPosition > currentPosition) {
+                targetPosition = currentPosition + maxJump;
+            } else {
+                targetPosition = currentPosition - maxJump;
+            }
+        }
+        
+        // 현재 위치 저장
+        horse.position = targetPosition - 40; // 40px 여백 제외한 실제 위치
+        
+        // 즉시 업데이트 또는 부드러운 이동 애니메이션
+        if (isImmediate) {
+            // 즉시 업데이트 (트랜지션 없음)
+            horseElement.style.transition = 'none';
+            horseElement.style.left = `${targetPosition}px`;
+            
+            // 50ms 후에 트랜지션 복원
+            setTimeout(() => {
+                horseElement.style.transition = 'left 0.15s linear';
+            }, 50);
+        } else {
+            // 부드러운 이동 (트랜지션 적용)
+            horseElement.style.transition = 'left 0.15s linear';
+            horseElement.style.left = `${targetPosition}px`;
+        }
+        
+        // 완주 판정 (트랙 폭의 95% 이상 진행 시)
+        const horseWidth = horseElement.offsetWidth || 100; // 말 요소의 폭 고려
+        const finishLine = GLOBAL_TRACK_WIDTH - horseWidth; // 말 아이콘 크기 고려한 결승선
+        
+        // 말이 결승선에 충분히 가까워졌는지 확인
+        if (horse.position >= finishLine - horseWidth * 0.5) {
+            // 근접 표시 (아직 완주하지 않은 경우)
+            if (!horse.nearFinish) {
+                horse.nearFinish = true;
+                horseElement.classList.add('near-finish');
+            }
+            
+            // 결승선을 완전히 통과했는지 확인
+            if (horse.position >= finishLine) {
+                // 경주 중일 때만 완주 처리
+                if (gamePhase === 'racing' && !horse.finishedDisplayed) {
+                    // 완주 시간 계산 (프레임 인덱스 기준)
+                    handleHorseFinish(horse, horseElement, currentFrameIndex);
+                }
+            }
+        }
+        
+        return horse.position;
+    }
+
+    // 말 이동 함수 개선 - style.left 파싱 문제 해결
+    function moveHorse(horse, distance) {
+        if (!horse || !horse.style) return;
+        
+        // style.left가 빈 문자열이거나 undefined일 때 발생하는 NaN 문제 해결
+        const currentPosition = parseFloat(horse.style.left?.replace("px", "")) || 0;
+        
+        // 새 위치 계산 및 음수 방지
+        const newPosition = Math.max(0, currentPosition + distance);
+        
+        // 새 위치 적용
+        horse.style.left = `${newPosition}px`;
+        
+        return newPosition;
     }
 }); 

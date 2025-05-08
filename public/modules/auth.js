@@ -122,16 +122,6 @@ function saveUserInfo(user) {
         const userDataStr = JSON.stringify(userData);
         localStorage.setItem(USER_KEY, userDataStr);
         localStorage.setItem('user', userDataStr);
-        
-        // 로그인 상태 플래그 설정
-        const isGuest = userData.isGuest === true || userData.username === '게스트 사용자';
-        if (!isGuest && userData.username) {
-            localStorage.setItem('loggedIn', 'true');
-            console.log('로그인 상태 플래그 설정: true');
-        } else {
-            localStorage.setItem('loggedIn', 'false');
-            console.log('로그인 상태 플래그 설정: false (게스트)');
-        }
     } catch (e) {
         console.error('사용자 정보 저장 오류:', e);
     }
