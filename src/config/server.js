@@ -3,7 +3,6 @@ const http = require('http');
 const socketIO = require('socket.io');
 const path = require('path');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const helmet = require('helmet');
 
 // Express 앱 생성
@@ -33,20 +32,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // 세션 설정
-app.use(session({
-  store: new SQLiteStore({ db: process.env.SESSION_DB_PATH || 'sessions.sqlite' }),
-  secret: process.env.SESSION_SECRET || 'baccarat-game-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
-    httpOnly: true, // 클라이언트 측 JavaScript에서 쿠키에 접근할 수 없도록 설정
-    secure: process.env.NODE_ENV === 'production' // 프로덕션 환경에서만 HTTPS를 통해서만 쿠키 전송
-  }
-}));
 
 const SERVER_CONFIG = {
-    port: process.env.PORT || 3000,
+    port: process.env.PORT,
     /* ... 다른 설정들 ... */
 };
 
