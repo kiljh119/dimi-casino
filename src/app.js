@@ -10,7 +10,7 @@ const net = require('net');
 
 // .env 파일이 없으면 생성
 const envPath = path.join(process.cwd(), '.env');
-if (!fs.existsSync(envPath)) {
+/*if (!fs.existsSync(envPath)) {
   console.log('.env 파일이 없습니다. 기본 .env 파일을 생성합니다.');
   
   const defaultEnvContent = `# 서버 설정
@@ -35,7 +35,7 @@ DB_PATH=./database.sqlite
     console.error('.env 파일 생성 중 오류 발생:', err);
   }
 }
-
+*/
 // API 라우트 설정
 app.use('/api', authRoutes);
 app.use('/api', gameRoutes);
