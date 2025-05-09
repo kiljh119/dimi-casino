@@ -1,83 +1,44 @@
+const dotenv = require('dotenv');
+dotenv.config(); // .env 파일 로드
+
 const { app, server, io } = require('./config/server');
-const { db, initializeDatabase } = require('./config/database');
-const authRoutes = require('./routes/authRoutes');
-const gameRoutes = require('./routes/gameRoutes');
+const { initializeDatabase } = require('./config/database');
 const { setupGameSocket } = require('./socket/gameHandler');
 const { setupHorseRacingSocket } = require('./socket/horseRacingHandler');
-const fs = require('fs');
-const path = require('path');
-const net = require('net');
 
-// .env 파일이 없으면 생성
-const envPath = path.join(process.cwd(), '.env');
-/*if (!fs.existsSync(envPath)) {
-  console.log('.env 파일이 없습니다. 기본 .env 파일을 생성합니다.');
-  
-  const defaultEnvContent = `# 서버 설정
-PORT=3001
-
-# JWT 비밀키
-JWT_SECRET=bacaraGameSecretKey2025
-
-# 세션 비밀키
-SESSION_SECRET=bacaraGameSessionKey2025
-
-# 데이터베이스 설정
-DB_PATH=./database.sqlite
-`;
-  try {
-    fs.writeFileSync(envPath, defaultEnvContent);
-    console.log('.env 파일이 성공적으로 생성되었습니다.');
-    
-    // 환경 변수 다시 로드
-    require('dotenv').config();
-  } catch (err) {
-    console.error('.env 파일 생성 중 오류 발생:', err);
-  }
+// 환경 변수 확인 및 기본값 설정
+if (!process.env.SESSION_SECRET) {
+  console.warn('경고: SESSION_SECRET이 설정되지 않았습니다. 기본값을 사용합니다.');
+  process.env.SESSION_SECRET = 'bacaraGameSessionKey2025';
 }
-*/
-// API 라우트 설정
-app.use('/api', authRoutes);
-app.use('/api', gameRoutes);
+
+if (!process.env.JWT_SECRET) {
+  console.warn('경고: JWT_SECRET이 설정되지 않았습니다. 기본값을 사용합니다.');
+  process.env.JWT_SECRET = 'bacaraGameSecretKey2025';
+}
+
+// Supabase 연결 정보 확인
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('오류: SUPABASE_URL 또는 SUPABASE_ANON_KEY가 설정되지 않았습니다.');
+  console.error('Supabase 연결이 실패할 수 있습니다.');
+}
+
+// 데이터베이스 초기화
+initializeDatabase()
+  .then(() => {
+    console.log('데이터베이스가 초기화되었습니다.');
+  })
+  .catch(err => {
+    console.error('데이터베이스 초기화 실패:', err);
+  });
 
 // 소켓 설정
 setupGameSocket(io);
 setupHorseRacingSocket(io);
 
-// 포트가 사용 가능한지 확인하는 함수
-function isPortAvailable(port) {
-  return new Promise((resolve) => {
-    const tester = net.createServer()
-      .once('error', () => resolve(false))
-      .once('listening', () => {
-        tester.once('close', () => resolve(true)).close();
-      })
-      .listen(port);
-  });
-}
-
-// 서버 시작 함수
-async function startServer(initialPort) {
-  let port = initialPort;
-  const maxPort = initialPort + 10; // 최대 10개의 다른 포트 시도
-  
-  while (port <= maxPort) {
-    const available = await isPortAvailable(port);
-    if (available) {
-      server.listen(port, () => {
-        console.log(`서버가 포트 ${port}에서 실행 중입니다.`);
-        console.log(`접속 방법: http://localhost:${port} (본인)`);
-        console.log(`네트워크 접속 방법: http://<your-local-ip>:${port} (친구들)`);
-      });
-      return;
-    }
-    console.log(`포트 ${port}는 이미 사용 중입니다. 다음 포트 시도...`);
-    port++;
-  }
-  
-  console.error(`사용 가능한 포트를 찾을 수 없습니다. (${initialPort} ~ ${maxPort})`);
-}
-
-// 서버 시작
-const PORT = parseInt(process.env.PORT || '3001');
-startServer(PORT); 
+// 필요한 함수와 객체 내보내기
+module.exports = {
+  app,
+  server,
+  io
+}; 

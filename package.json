@@ -5,7 +5,9 @@
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
-        "dev": "nodemon server.js"
+        "dev": "nodemon server.js",
+        "build": "echo 'Build step completed'",
+        "vercel-build": "echo 'Vercel build completed'"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.49.4",
