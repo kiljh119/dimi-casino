@@ -181,4 +181,59 @@ CREATE POLICY "Users can insert their own chat messages" ON chat_messages
     auth.uid() = user_id OR 
     (auth.uid() IS NOT NULL AND user_id IS NULL)
   );
-*/ 
+*/
+
+-- 세션 테이블
+CREATE TABLE IF NOT EXISTS user_sessions (
+  sid VARCHAR NOT NULL PRIMARY KEY,
+  sess JSONB NOT NULL,
+  expire TIMESTAMP(6) NOT NULL
+);
+
+-- 세션 만료 인덱스
+CREATE INDEX IF NOT EXISTS IDX_user_sessions_expire ON user_sessions (expire);
+
+-- RLS(Row Level Security) 정책 설정
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+
+-- 세션 테이블에 대한 모든 작업 허용 정책
+CREATE POLICY "Allow all operations on sessions" ON user_sessions
+  USING (true)
+  WITH CHECK (true);
+
+-- 필요한 저장 프로시저 생성
+CREATE OR REPLACE FUNCTION create_table_if_not_exists(table_name TEXT, query_text TEXT)
+RETURNS VOID AS $$
+BEGIN
+  EXECUTE query_text;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- SQL 실행 함수들
+CREATE OR REPLACE FUNCTION execute_sql(query_text TEXT, params JSONB DEFAULT '[]'::JSONB)
+RETURNS JSONB AS $$
+BEGIN
+  EXECUTE query_text;
+  RETURN '{"rows_affected": 1}'::JSONB;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION execute_sql_get(query_text TEXT, params JSONB DEFAULT '[]'::JSONB)
+RETURNS JSONB AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  EXECUTE query_text INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION execute_sql_all(query_text TEXT, params JSONB DEFAULT '[]'::JSONB)
+RETURNS JSONB AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  EXECUTE query_text INTO result;
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER; 

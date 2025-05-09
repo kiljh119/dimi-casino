@@ -2,8 +2,9 @@ const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
 const path = require('path');
-const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
+const sessionMiddleware = require('../middlewares/sessionMiddleware');
 
 // Express 앱 생성
 const app = express();
@@ -30,8 +31,14 @@ app.use(helmet({
 app.use(express.static(path.join(__dirname, '../../public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// 세션 설정
+// 세션 설정 - 커스텀 Supabase 세션 미들웨어 사용
+app.use(sessionMiddleware({
+  secret: process.env.SESSION_SECRET,
+  cookieName: 'bacarat.sid',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30일
+}));
 
 const SERVER_CONFIG = {
     port: process.env.PORT,

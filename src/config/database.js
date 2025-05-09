@@ -168,6 +168,35 @@ async function initializeDatabase() {
       throw gameHistoryError;
     }
     
+    // 세션 테이블 확인 및 생성
+    const { error: sessionTableError } = await supabase.rpc('create_table_if_not_exists', {
+      table_name: 'user_sessions',
+      query_text: `
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          sid VARCHAR NOT NULL PRIMARY KEY,
+          sess JSON NOT NULL,
+          expire TIMESTAMP(6) NOT NULL
+        )
+      `
+    });
+    
+    if (sessionTableError) {
+      console.error('세션 테이블 초기화 오류:', sessionTableError.message);
+      throw sessionTableError;
+    }
+    
+    // 세션 테이블에 인덱스 생성
+    const { error: sessionIndexError } = await supabase.rpc('execute_sql', {
+      query_text: `
+        CREATE INDEX IF NOT EXISTS IDX_user_sessions_expire ON user_sessions (expire)
+      `
+    });
+    
+    if (sessionIndexError) {
+      console.error('세션 인덱스 생성 오류:', sessionIndexError.message);
+      throw sessionIndexError;
+    }
+    
     console.log('데이터베이스 테이블이 초기화되었습니다.');
   } catch (error) {
     console.error('데이터베이스 테이블 초기화 실패:', error.message);
