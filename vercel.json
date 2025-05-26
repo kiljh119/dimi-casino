@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
       {
-        "src": "server.js",			
+        "src": "src/app.js",
         "use": "@vercel/node"
       },
       {
@@ -13,7 +13,7 @@
     "routes": [
       {
         "src": "/api/(.*)",
-        "dest": "/server.js"
+        "dest": "src/app.js"
       },
       {
         "src": "/socket.io/(.*)",
@@ -25,7 +25,7 @@
       },
       {
         "src": "/(.*)",
-        "dest": "/server.js"
+        "dest": "src/app.js"
       }
     ]
   }

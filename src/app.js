@@ -1,10 +1,20 @@
 const dotenv = require('dotenv');
 dotenv.config(); // .env 파일 로드
 
+const path = require('path');
+const express = require('express');
 const { app, server, io } = require('./config/server');
 const { initializeDatabase } = require('./config/database');
 const { setupGameSocket } = require('./socket/gameHandler');
 const { setupHorseRacingSocket } = require('./socket/horseRacingHandler');
+
+// 정적 파일 서빙 설정
+app.use(express.static(path.join(__dirname, '../public')));
+
+// 기본 라우트 설정
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 // 환경 변수 확인 및 기본값 설정
 if (!process.env.SESSION_SECRET) {
