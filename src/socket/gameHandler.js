@@ -297,7 +297,7 @@ function setupGameSocket(io) {
                 playerCards,
                 bankerCards,
                 time: Date.now(),
-                gameId // 게임 ID 추가
+                gameId
               });
               
               // 게임 완료 및 랭킹 업데이트는 베팅 후 정확히 10초 후에 처리
@@ -339,7 +339,7 @@ function setupGameSocket(io) {
                 } catch (error) {
                   console.error('게임 완료 처리 중 오류:', error);
                 }
-              }, 10000); // 베팅 확정 후 정확히 10초 후
+              }, 10000);
             } catch (error) {
               console.error('Game result error:', error);
               socket.emit('error', { message: '게임 결과 처리 중 오류가 발생했습니다.' });
@@ -348,7 +348,7 @@ function setupGameSocket(io) {
             console.error('Game result error:', error);
             socket.emit('error', { message: '게임 결과 처리 중 오류가 발생했습니다.' });
           }
-        }, 1500); // 1.5초 후 결과 계산 (카드 애니메이션 처리 시간)
+        }, 1500);
       } catch (error) {
         console.error('Bet error:', error);
         socket.emit('bet_response', { 
@@ -400,7 +400,7 @@ function setupGameSocket(io) {
         }
         
         formattedMessage = {
-          sender: socket.username, // 항상 소켓의 username을 사용 (보안)
+          sender: socket.username,
           message: messageText,
           time: message.time || Date.now()
         };
@@ -442,7 +442,7 @@ function setupGameSocket(io) {
         }
       } else {
         console.log('유효하지 않은 메시지 형식:', typeof message);
-        return; // 유효하지 않은 메시지 형식
+        return;
       }
       
       // 관리자 여부 확인
@@ -453,7 +453,6 @@ function setupGameSocket(io) {
         formattedMessage.isAdmin = true;
         console.log(`관리자 메시지로 표시됨: ${socket.username}, isAdmin 타입: ${typeof formattedMessage.isAdmin}, 값: ${formattedMessage.isAdmin}`);
       } else {
-        // 명시적으로 false로 설정
         formattedMessage.isAdmin = false;
         console.log(`일반 사용자 메시지로 표시됨: ${socket.username}`);
       }
@@ -496,11 +495,11 @@ function setupGameSocket(io) {
 
       // XSS 공격 패턴 검사
       const xssPatterns = [
-        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, // <script> 태그
-        /<img[^>]+\bonerror\b[^>]*>/gi, // onerror 속성을 가진 이미지 태그
-        /<iframe[^>]*>/gi, // iframe 태그
-        /<a[^>]*\bhref\s*=\s*["']?(javascript:|data:)[^>]*>/gi, // 자바스크립트 프로토콜이나 데이터 URI를 사용하는 링크
-        /on\w+\s*=\s*["']?[^"'>]*["']?/gi, // 모든 on* 이벤트 핸들러 (onclick, onload 등)
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        /<img[^>]+\bonerror\b[^>]*>/gi,
+        /<iframe[^>]*>/gi,
+        /<a[^>]*\bhref\s*=\s*["']?(javascript:|data:)[^>]*>/gi,
+        /on\w+\s*=\s*["']?[^"'>]*["']?/gi,
       ];
       
       // XSS 패턴이 발견되면 로그 기록
@@ -510,7 +509,7 @@ function setupGameSocket(io) {
         console.warn('잠재적인 XSS 공격 시도가 감지되었습니다:', message);
       }
       
-      // 금지어 목록 (필요에 따라 확장 가능)
+      // 금지어 목록
       const badWords = ['욕설', '비속어', '심한말'];
       
       // XSS 공격 방지를 위한 HTML 이스케이프 처리
@@ -518,7 +517,6 @@ function setupGameSocket(io) {
       
       // 금지어 필터링
       badWords.forEach(word => {
-        // 금지어를 *로 대체
         const regex = new RegExp(word, 'gi');
         filteredMessage = filteredMessage.replace(regex, '*'.repeat(word.length));
       });
@@ -532,18 +530,15 @@ function setupGameSocket(io) {
         return '';
       }
       
-      // 추가적인 방어 레이어: 모든 HTML 태그 치환
-      const sanitizedText = text
+      return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;')
         .replace(/`/g, '&#96;')
-        .replace(/(javascript\s*:)/gi, 'blocked:') // 자바스크립트 프로토콜 차단
-        .replace(/(data\s*:)/gi, 'blocked:'); // 데이터 URI 차단
-      
-      return sanitizedText;
+        .replace(/(javascript\s*:)/gi, 'blocked:')
+        .replace(/(data\s*:)/gi, 'blocked:');
     }
     
     // 게임 데이터 요청
@@ -588,7 +583,7 @@ function setupGameSocket(io) {
       }
     });
     
-    // 채팅 메시지 요청 (새로운 이벤트)
+    // 채팅 메시지 요청
     socket.on('request_chat_messages', async () => {
       try {
         console.log('채팅 메시지 요청됨 - 사용자:', socket.username);
@@ -597,13 +592,10 @@ function setupGameSocket(io) {
         
         // 메시지 형식 정상화
         const formattedMessages = chatMessages.map(msg => {
-          // 디버깅을 위한 원본 메시지 출력
           console.log('메시지 형식:', msg);
           
-          // isAdmin 값 정확히 확인
           let isAdmin = msg.isAdmin === true || msg.isAdmin === 1;
           
-          // admin 계정이면 항상 관리자로 표시
           if (msg.sender && msg.sender.toLowerCase() === 'admin') {
             isAdmin = true;
           }
@@ -618,7 +610,6 @@ function setupGameSocket(io) {
           };
         });
         
-        // 특정 사용자에게만 전송
         socket.emit('chat_history', formattedMessages);
         console.log('채팅 메시지 전송 완료:', formattedMessages.length);
       } catch (error) {
@@ -630,10 +621,7 @@ function setupGameSocket(io) {
     // 다른 사용자들의 최근 게임 기록 요청 처리
     socket.on('request_other_players_history', async () => {
       try {
-        // 최근 공개 게임 기록 불러오기
         const recentHistory = await PublicGameHistory.getRecent(20);
-        
-        // 요청한 클라이언트에게만 결과 전송
         socket.emit('other_players_history', recentHistory);
         console.log('다른 사용자들의 게임 기록 전송 완료:', recentHistory.length);
       } catch (error) {
@@ -645,7 +633,6 @@ function setupGameSocket(io) {
     // 특정 게임 상세 기록 요청 처리
     socket.on('request_game_details', async (gameId) => {
       try {
-        // 게임 기록 ID로 상세 정보 조회
         const gameDetails = await PublicGameHistory.getById(gameId);
         
         if (gameDetails) {
@@ -663,8 +650,6 @@ function setupGameSocket(io) {
     // 온라인 플레이어 목록 요청 처리
     socket.on('request_online_players', () => {
       console.log('온라인 플레이어 목록 요청:', socket.username || socket.id);
-      
-      // 현재 접속자 목록 전송
       socket.emit('online_players_update', Object.keys(onlinePlayers));
       console.log('온라인 플레이어 목록 전송 완료:', Object.keys(onlinePlayers).length, '명');
     });
@@ -674,11 +659,8 @@ function setupGameSocket(io) {
       console.log('사용자 연결이 종료되었습니다:', socket.id);
       
       if (socket.username && onlinePlayers[socket.username]) {
-        // 현재 사용자 정보 삭제
         delete onlinePlayers[socket.username];
         delete socketIdsByUsername[socket.username];
-        
-        // 모든 사용자에게 접속자 목록 업데이트 알림
         updateOnlinePlayers(io);
       }
     });
@@ -692,7 +674,6 @@ async function updateAndSendRankings(io) {
     const rankings = await User.getTopRankings();
     console.log('랭킹 데이터:', rankings.length);
     
-    // 소켓 객체 검증
     if (!io || typeof io.emit !== 'function') {
       console.error('IO 객체가 유효하지 않습니다:', io);
       return;
@@ -705,9 +686,8 @@ async function updateAndSendRankings(io) {
   }
 }
 
-// 온라인 플레이어 업데이트 함수 (추가)
+// 온라인 플레이어 업데이트 함수
 function updateOnlinePlayers(io) {
-  // 소켓 객체 검증
   if (!io || typeof io.emit !== 'function') {
     console.error('IO 객체가 유효하지 않습니다:', io);
     return;
@@ -717,9 +697,9 @@ function updateOnlinePlayers(io) {
   console.log('온라인 플레이어 업데이트 완료:', Object.keys(onlinePlayers).length);
 }
 
-module.exports = { 
-  setupGameSocket, 
-  onlinePlayers, 
+module.exports = {
+  setupGameSocket,
+  onlinePlayers,
   games,
   updateAndSendRankings,
   updateOnlinePlayers

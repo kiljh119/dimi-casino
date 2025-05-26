@@ -10,7 +10,7 @@ const jwtSecret = process.env.JWT_SECRET || 'bacaraGameSecretKey2025';
 /**
  * JWT 토큰 인증 미들웨어
  */
-exports.authenticateJWT = (req, res, next) => {
+const authenticateJWT = (req, res, next) => {
   console.log('인증 미들웨어 실행');
   
   // 헤더에서 토큰 가져오기
@@ -64,7 +64,7 @@ exports.authenticateJWT = (req, res, next) => {
 /**
  * 관리자 권한 확인 미들웨어
  */
-exports.isAdmin = (req, res, next) => {
+const isAdmin = (req, res, next) => {
   console.log('관리자 권한 확인 미들웨어 실행');
   console.log('세션 정보:', req.session);
   
@@ -78,4 +78,9 @@ exports.isAdmin = (req, res, next) => {
   
   console.log(`사용자 ${req.session.username}에게 관리자 접근 권한 승인됨`);
   next();
+};
+
+module.exports = {
+  authenticateJWT,
+  isAdmin
 }; 

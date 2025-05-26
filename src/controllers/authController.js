@@ -1,9 +1,9 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
-const { generateToken } = require('../config/jwt');
+const { generateToken, verifyToken } = require('../config/jwt');
 
 // 회원가입 컨트롤러
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -59,7 +59,7 @@ exports.register = async (req, res) => {
 };
 
 // 로그인 컨트롤러
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -124,7 +124,7 @@ exports.login = async (req, res) => {
 };
 
 // 로그아웃 컨트롤러
-exports.logout = (req, res) => {
+const logout = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       return res.status(500).json({ success: false, message: '로그아웃 중 오류가 발생했습니다.' });
@@ -135,7 +135,7 @@ exports.logout = (req, res) => {
 };
 
 // 토큰 검증 컨트롤러 (자동 로그인용)
-exports.verifyToken = async (req, res) => {
+const verifyTokenController = async (req, res) => {
   const authHeader = req.headers.authorization;
   let token = req.body.token;
   
@@ -150,7 +150,6 @@ exports.verifyToken = async (req, res) => {
   
   try {
     console.log('토큰 검증 시도:', token.substring(0, 20) + '...');
-    const { verifyToken, generateToken } = require('../config/jwt');
     const result = verifyToken(token);
     
     if (!result.valid) {
@@ -202,20 +201,14 @@ exports.verifyToken = async (req, res) => {
     });
   } catch (error) {
     console.error('Token verification error:', error);
-    res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+    return res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
   }
 };
 
-// 사용자 상세 정보 가져오기
-exports.getUserDetails = async (req, res) => {
+// 사용자 상세 정보 조회
+const getUserDetails = async (req, res) => {
   try {
-    const userId = req.session.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
-    }
-    
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     
     if (!user) {
       return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
@@ -227,10 +220,7 @@ exports.getUserDetails = async (req, res) => {
         id: user.id,
         username: user.username,
         balance: user.balance,
-        wins: user.wins || 0,
-        losses: user.losses || 0,
-        profit: user.profit || 0,
-        created_at: user.created_at
+        isAdmin: user.is_admin === true || user.is_admin === 1
       }
     });
   } catch (error) {
@@ -240,34 +230,15 @@ exports.getUserDetails = async (req, res) => {
 };
 
 // 비밀번호 변경
-exports.changePassword = async (req, res) => {
-  console.log('비밀번호 변경 API 호출됨', req.session);
-  console.log('요청 바디:', req.body);
+const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
   
-  const { currentPassword, newPassword, confirmPassword } = req.body;
-  
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return res.status(400).json({ success: false, message: '모든 필드를 입력해주세요.' });
-  }
-  
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({ success: false, message: '새 비밀번호와 확인 비밀번호가 일치하지 않습니다.' });
-  }
-  
-  // 비밀번호 복잡성 검사
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: '비밀번호는 최소 6자 이상이어야 합니다.' });
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.' });
   }
   
   try {
-    const userId = req.session.userId;
-    console.log('사용자 ID:', userId);
-    
-    if (!userId) {
-      return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
-    }
-    
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     
     if (!user) {
       return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
@@ -279,15 +250,21 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' });
     }
     
-    // 비밀번호 변경
-    const result = await User.updatePassword(userId, newPassword);
+    // 새 비밀번호로 업데이트
+    await User.updatePassword(user.id, newPassword);
     
-    res.status(200).json({
-      success: true,
-      message: '비밀번호가 성공적으로 변경되었습니다.'
-    });
+    res.status(200).json({ success: true, message: '비밀번호가 변경되었습니다.' });
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
   }
+};
+
+module.exports = {
+  register,
+  login,
+  logout,
+  verifyToken: verifyTokenController,
+  getUserDetails,
+  changePassword
 }; 

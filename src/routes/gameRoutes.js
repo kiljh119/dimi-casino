@@ -1,7 +1,8 @@
 const express = require('express');
-const router = express.Router();
 const gameController = require('../controllers/gameController');
 const adminController = require('../controllers/adminController');
+
+const router = express.Router();
 
 // 게임 관련 라우트
 router.get('/history', gameController.getHistory);

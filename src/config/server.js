@@ -1,9 +1,8 @@
 // .env 파일 로드
 require('dotenv').config();
-
 const express = require('express');
 const http = require('http');
-const socketIO = require('socket.io');
+const { Server } = require('socket.io');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
@@ -19,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Socket.IO 설정
-const io = socketIO(server, {
+const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
       ? [process.env.FRONTEND_URL, 'https://*.vercel.app', 'https://casino-net.vercel.app'] 

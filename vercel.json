@@ -3,7 +3,11 @@
     "builds": [
       {
         "src": "src/config/server.js",
-        "use": "@vercel/node"
+        "use": "@vercel/node",
+        "config": {
+          "nodeVersion": "18.x",
+          "buildCommand": "npm run build"
+        }
       },
       {
         "src": "public/**",

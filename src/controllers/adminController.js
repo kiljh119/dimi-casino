@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { isAdmin } = require('../middlewares/authMiddleware');
 
 // 모든 사용자 조회
-exports.getAllUsers = [isAdmin, async (req, res) => {
+const getAllUsers = [isAdmin, async (req, res) => {
   try {
     const users = await User.getAllUsers();
     res.status(200).json({ success: true, users });
@@ -14,7 +14,7 @@ exports.getAllUsers = [isAdmin, async (req, res) => {
 }];
 
 // 사용자 검색
-exports.searchUsers = [isAdmin, async (req, res) => {
+const searchUsers = [isAdmin, async (req, res) => {
   const { query } = req.query;
   
   if (!query) {
@@ -31,7 +31,7 @@ exports.searchUsers = [isAdmin, async (req, res) => {
 }];
 
 // 잔액 추가
-exports.addBalance = [isAdmin, async (req, res) => {
+const addBalance = [isAdmin, async (req, res) => {
   const { userId, amount } = req.body;
   
   if (!userId || !amount) {
@@ -58,7 +58,7 @@ exports.addBalance = [isAdmin, async (req, res) => {
 }];
 
 // 잔액 감소
-exports.subtractBalance = [isAdmin, async (req, res) => {
+const subtractBalance = [isAdmin, async (req, res) => {
   const { userId, amount } = req.body;
   
   if (!userId || !amount) {
@@ -98,7 +98,7 @@ exports.subtractBalance = [isAdmin, async (req, res) => {
 }];
 
 // 계정 삭제
-exports.deleteUser = [isAdmin, async (req, res) => {
+const deleteUser = [isAdmin, async (req, res) => {
   const { userId } = req.body;
   
   if (!userId) {
@@ -137,4 +137,12 @@ exports.deleteUser = [isAdmin, async (req, res) => {
       message: `계정 삭제 중 오류가 발생했습니다: ${error.message}`
     });
   }
-}]; 
+}];
+
+module.exports = {
+  getAllUsers,
+  searchUsers,
+  addBalance,
+  subtractBalance,
+  deleteUser
+}; 

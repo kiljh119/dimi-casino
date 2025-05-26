@@ -110,93 +110,98 @@ async function initializeDatabase() {
   }
 }
 
-// 필요한 함수들을 내보냅니다
+// 기존 데이터베이스 API 사용 형태를 유지하기 위한 래퍼
+async function run(query, params = [], callback) {
+  try {
+    const { data, error } = await supabase.rpc('execute_sql', {
+      query_text: query,
+      params: params
+    });
+    
+    if (error) {
+      console.error('RPC execute_sql 오류:', error.message);
+      throw error;
+    }
+    
+    if (callback && typeof callback === 'function') {
+      callback.call({ lastID: data?.id || null, changes: data?.rows_affected || 0 });
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('Database error:', err.message);
+    if (callback && typeof callback === 'function') {
+      callback(err);
+    }
+    throw err;
+  }
+}
+
+async function get(query, params = [], callback) {
+  try {
+    const { data, error } = await supabase.rpc('execute_sql_get', {
+      query_text: query,
+      params: params
+    });
+    
+    if (error) {
+      console.error('RPC execute_sql_get 오류:', error.message);
+      throw error;
+    }
+    
+    if (callback && typeof callback === 'function') {
+      callback(null, data);
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('Database error:', err.message);
+    if (callback && typeof callback === 'function') {
+      callback(err);
+    }
+    throw err;
+  }
+}
+
+async function all(query, params = [], callback) {
+  try {
+    const { data, error } = await supabase.rpc('execute_sql_all', {
+      query_text: query,
+      params: params
+    });
+    
+    if (error) {
+      console.error('RPC execute_sql_all 오류:', error.message);
+      throw error;
+    }
+    
+    if (callback && typeof callback === 'function') {
+      callback(null, data);
+    }
+    
+    return data;
+  } catch (err) {
+    console.error('Database error:', err.message);
+    if (callback && typeof callback === 'function') {
+      callback(err);
+    }
+    throw err;
+  }
+}
+
+function serialize(callback) {
+  // Supabase에서는 serialize가 필요하지 않지만 호환성을 위해 유지
+  if (callback && typeof callback === 'function') {
+    callback();
+  }
+}
+
 module.exports = {
   supabase,
+  testConnection,
   initializeDatabase,
-  // 기존 데이터베이스 API 사용 형태를 유지하기 위한 래퍼
-  run: async (query, params = [], callback) => {
-    try {
-      const { data, error } = await supabase.rpc('execute_sql', {
-        query_text: query,
-        params: params
-      });
-      
-      if (error) {
-        console.error('RPC execute_sql 오류:', error.message);
-        throw error;
-      }
-      
-      if (callback && typeof callback === 'function') {
-        callback.call({ lastID: data?.id || null, changes: data?.rows_affected || 0 });
-      }
-      
-      return data;
-    } catch (err) {
-      console.error('Database error:', err.message);
-      if (callback && typeof callback === 'function') {
-        callback(err);
-      }
-      throw err;
-    }
-  },
-  
-  get: async (query, params = [], callback) => {
-    try {
-      const { data, error } = await supabase.rpc('execute_sql_get', {
-        query_text: query,
-        params: params
-      });
-      
-      if (error) {
-        console.error('RPC execute_sql_get 오류:', error.message);
-        throw error;
-      }
-      
-      if (callback && typeof callback === 'function') {
-        callback(null, data);
-      }
-      
-      return data;
-    } catch (err) {
-      console.error('Database error:', err.message);
-      if (callback && typeof callback === 'function') {
-        callback(err);
-      }
-      throw err;
-    }
-  },
-  
-  all: async (query, params = [], callback) => {
-    try {
-      const { data, error } = await supabase.rpc('execute_sql_all', {
-        query_text: query,
-        params: params
-      });
-      
-      if (error) {
-        console.error('RPC execute_sql_all 오류:', error.message);
-        throw error;
-      }
-      
-      if (callback && typeof callback === 'function') {
-        callback(null, data);
-      }
-      
-      return data;
-    } catch (err) {
-      console.error('Database error:', err.message);
-      if (callback && typeof callback === 'function') {
-        callback(err);
-      }
-      throw err;
-    }
-  },
-  
-  serialize: (callback) => {
-    // Supabase에서는 serialize가 필요하지 않지만 호환성을 위해 유지
-    if (callback && typeof callback === 'function') {
-      callback();
-    }
-  }
+  run,
+  get,
+  all,
+  serialize
 }; 

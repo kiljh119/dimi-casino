@@ -444,29 +444,30 @@ class User {
   }
 
   // 관리자 계정 확인 메서드 추가
-  static isAdmin(userId) {
-    return new Promise((resolve, reject) => {
-      supabase
-        .from('users')
-        .select('is_admin')
-        .eq('id', userId)
-        .single()
-        .then(data => {
-          // 데이터베이스에서 반환된 값이 boolean이나 숫자일 수 있으므로 두 경우 모두 처리
-          if (data.is_admin === true || data.is_admin === 1) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        })
-        .catch(error => {
-          reject(error);
-        });
+  static async isAdmin(userId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const user = await this.findById(userId);
+        
+        if (!user) {
+          return resolve(false);
+        }
+        
+        // admin 사용자명은 항상 관리자 권한 부여
+        if (user.username && user.username.toLowerCase() === 'admin') {
+          return resolve(true);
+        }
+        
+        // is_admin 값이 true(boolean) 또는 1(integer)인 경우 관리자 권한 부여
+        resolve(user.is_admin === true || user.is_admin === 1);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
   // 관리자 계정 수정 (비밀번호 변경)
-  static updateAdminPassword(adminId, newPassword) {
+  static async updateAdminPassword(adminId, newPassword) {
     return new Promise(async (resolve, reject) => {
       try {
         // 관리자 확인
@@ -501,7 +502,7 @@ class User {
   }
 
   // 일반 사용자 비밀번호 변경
-  static updatePassword(userId, newPassword) {
+  static async updatePassword(userId, newPassword) {
     return new Promise(async (resolve, reject) => {
       try {
         // 비밀번호 해싱
