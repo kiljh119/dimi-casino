@@ -10,7 +10,7 @@
         "start": "node src/config/server.js",
         "dev": "nodemon src/config/server.js",
         "build": "echo 'Build step completed'",
-        "vercel-build": "node src/config/server.js"
+        "vercel-build": "echo 'Vercel build completed'"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.49.4",

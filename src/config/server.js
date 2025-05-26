@@ -97,9 +97,9 @@ initializeDatabase()
     setupGameSocket(io);
     setupHorseRacingSocket(io);
 
-    // 서버 시작
-    const PORT = process.env.PORT || 3000;
+    // 서버 시작 (로컬 개발 환경에서만)
     if (process.env.NODE_ENV !== 'production') {
+      const PORT = process.env.PORT || 3000;
       server.listen(PORT, () => {
         console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
         console.log(`접속 방법: http://localhost:${PORT} (본인)`);
@@ -110,4 +110,5 @@ initializeDatabase()
     console.error('데이터베이스 초기화 실패:', err);
   });
 
-module.exports = { app, server, io }; 
+// Vercel 배포를 위해 app만 내보내기
+module.exports = app; 
