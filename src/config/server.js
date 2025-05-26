@@ -78,11 +78,18 @@ const checkLogin = (req, res, next) => {
 };
 
 // 로그인/회원가입 페이지는 로그인 체크 제외
-app.get(['/login', '/register'], (req, res) => {
+app.get('/login', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/menu');
   }
-  res.sendFile(path.join(__dirname, '../../public', 'menu.html'));
+  res.sendFile(path.join(__dirname, '../../public', 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+  if (req.session.userId) {
+    return res.redirect('/menu');
+  }
+  res.sendFile(path.join(__dirname, '../../public', 'register.html'));
 });
 
 // 보호된 라우트 - 로그인 필요
