@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
       {
-        "src": "src/app.js",
+        "src": "src/config/server.js",
         "use": "@vercel/node"
       },
       {
@@ -13,19 +13,23 @@
     "routes": [
       {
         "src": "/socket.io/(.*)",
-        "dest": "src/app.js"
+        "dest": "src/config/server.js"
       },
       {
         "src": "/api/(.*)",
-        "dest": "src/app.js"
+        "dest": "src/config/server.js"
       },
       {
-        "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico)$)",
+        "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|mp3|wav)$)",
         "dest": "/public/$1"
       },
       {
+        "src": "/menu",
+        "dest": "/public/menu.html"
+      },
+      {
         "src": "/(.*)",
-        "dest": "src/app.js"
+        "dest": "src/config/server.js"
       }
     ]
   }

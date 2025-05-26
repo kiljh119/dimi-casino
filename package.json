@@ -2,10 +2,10 @@
     "name": "casino-net",
     "version": "1.0.0",
     "description": "로컬 네트워크에서 즐기는 멀티플레이어 바카라 게임",
-    "main": "server.js",
+    "main": "src/config/server.js",
     "scripts": {
-        "start": "node server.js",
-        "dev": "nodemon server.js",
+        "start": "node src/config/server.js",
+        "dev": "nodemon src/config/server.js",
         "build": "echo 'Build step completed'",
         "vercel-build": "echo 'Vercel build completed'"
     },
