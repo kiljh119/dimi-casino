@@ -7,6 +7,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const sessionMiddleware = require('../middlewares/sessionMiddleware');
+const { authenticateJWT } = require('../middlewares/authMiddleware');
 const authRoutes = require('../routes/authRoutes');
 const gameRoutes = require('../routes/gameRoutes');
 const { initializeDatabase } = require('./database');
@@ -68,8 +69,24 @@ app.use(express.static(path.join(__dirname, '../../public'), {
   index: false // index.html 자동 서빙 비활성화
 }));
 
-// / 및 주요 라우트에서 menu.html 반환
-app.get(['/', '/index.html', '/menu', '/baccarat', '/horse-racing', '/ranking', '/admin', '/my-page', '/leaderboard', '/chat', '/login', '/register'], (req, res) => {
+// 로그인 체크 미들웨어
+const checkLogin = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.redirect('/login');
+  }
+  next();
+};
+
+// 로그인/회원가입 페이지는 로그인 체크 제외
+app.get(['/login', '/register'], (req, res) => {
+  if (req.session.userId) {
+    return res.redirect('/menu');
+  }
+  res.sendFile(path.join(__dirname, '../../public', 'menu.html'));
+});
+
+// 보호된 라우트 - 로그인 필요
+app.get(['/', '/index.html', '/menu', '/baccarat', '/horse-racing', '/ranking', '/admin', '/my-page', '/leaderboard', '/chat'], checkLogin, (req, res) => {
   res.sendFile(path.join(__dirname, '../../public', 'menu.html'));
 });
 
