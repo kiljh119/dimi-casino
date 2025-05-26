@@ -12,12 +12,12 @@
     ],
     "routes": [
       {
-        "src": "/api/(.*)",
+        "src": "/socket.io/(.*)",
         "dest": "src/app.js"
       },
       {
-        "src": "/socket.io/(.*)",
-        "dest": "/server.js"
+        "src": "/api/(.*)",
+        "dest": "src/app.js"
       },
       {
         "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico)$)",
