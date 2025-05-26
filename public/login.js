@@ -236,6 +236,14 @@ async function autoLogin() {
     }
 }
 
+// 인증 데이터 초기화
+function clearAuthData() {
+    removeToken();
+    loginUsername.value = '';
+    loginPassword.value = '';
+    loginError.textContent = '';
+}
+
 // 버튼 상태 설정 (로딩 중 또는 기본 상태)
 function setButtonState(button, isLoading, text) {
     button.disabled = isLoading;
@@ -312,11 +320,14 @@ function setupEventListeners() {
 
 // 초기화 함수
 function init() {
+    // 이벤트 리스너 설정
+    setupSocketListeners();
+    setupEventListeners();
+    
     // 자동 로그인 시도
     autoLogin().then(success => {
-        if (!success) {
-            setupSocketListeners();
-            setupEventListeners();
+        if (success) {
+            redirectToMainMenu();
         }
     });
 }
