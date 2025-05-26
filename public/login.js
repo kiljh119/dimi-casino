@@ -1,5 +1,11 @@
 // 소켓 연결
-const socket = io();
+const socket = io({
+    path: '/api/socket.io',
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
+});
 
 // DOM 요소
 const authScreen = document.getElementById('auth-screen');

@@ -16,20 +16,14 @@
     ],
     "routes": [
       {
-        "src": "/socket.io/(.*)",
-        "dest": "src/config/server.js"
-      },
-      {
-        "src": "/api/(.*)",
-        "dest": "src/config/server.js"
-      },
-      {
-        "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|mp3|wav)$)",
-        "dest": "/public/$1"
-      },
-      {
-        "src": "/menu",
-        "dest": "/public/menu.html"
+        "src": "/api/socket.io/(.*)",
+        "dest": "src/config/server.js",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "headers": {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+        }
       },
       {
         "src": "/(.*)",

@@ -27,7 +27,8 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  path: '/api/socket.io' // Vercel에서 Socket.IO 경로 설정
 });
 
 // 보안 미들웨어 설정
@@ -39,7 +40,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https://cdnjs.cloudflare.com"],
-      connectSrc: ["'self'", "ws:", "wss:", "https://*.supabase.co", "https://*.vercel.app"]
+      connectSrc: ["'self'", "ws:", "wss:", "https://*.supabase.co", "https://*.vercel.app", "/api/socket.io"]
     }
   },
   crossOriginEmbedderPolicy: false,
